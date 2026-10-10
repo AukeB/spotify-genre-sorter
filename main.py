@@ -7,6 +7,7 @@ import typer
 from sgs.authentication import SpotifyAuthenticator
 from sgs.config_manager import ConfigManager
 from sgs.song_sources import SongSources
+from sgs.spotify_cache import SpotifyCache
 from sgs.spotify_api import fetch_current_user
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,9 @@ def main(
     config = ConfigManager().load_config_file()
     songs = SongSources(config, access_token).get_all_songs()
     logger.info("Found %d unique songs", len(songs))
+
+    with SpotifyCache() as cache:
+        cache.sync_artist_genres(access_token)
 
 
 if __name__ == "__main__":
