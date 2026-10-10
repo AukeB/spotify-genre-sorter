@@ -5,7 +5,7 @@ from collections.abc import Iterator
 
 import requests
 
-from sgs.constants import SPOTIFY_ARTISTS_URL, SPOTIFY_ME_URL
+from sgs.constants import SPOTIFY_ME_URL
 
 logger = logging.getLogger(__name__)
 
@@ -62,37 +62,6 @@ def fetch_total(url: str, access_token: str) -> int:
     total: int = body["total"]
 
     return total
-
-
-def get_artists(artist_ids: list[str], access_token: str) -> list[dict | None]:
-    """Fetches artists by ID, in one request.
-
-    Spotify returns null for an ID it does not know, so the list can contain
-    None entries. It keeps the same order as the IDs.
-
-    Args:
-        artist_ids (list[str]): Up to ARTISTS_PER_REQUEST artist IDs.
-        access_token (str): A valid Spotify access token.
-
-    Returns:
-        artists (list[dict | None]): The artist objects, with None for unknown
-            IDs.
-
-    Raises:
-        requests.HTTPError: If Spotify rejects the request.
-    """
-    response = requests.get(
-        SPOTIFY_ARTISTS_URL,
-        headers={"Authorization": f"Bearer {access_token}"},
-        params={"ids": ",".join(artist_ids)},
-        timeout=10,
-    )
-
-    response.raise_for_status()
-    body = response.json()
-    artists: list[dict | None] = body["artists"]
-
-    return artists
 
 
 def get_all_pages(

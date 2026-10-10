@@ -21,7 +21,6 @@ SPOTIFY_ME_PLAYLISTS_URL = f"{SPOTIFY_API_BASE_URL}/me/playlists"
 SPOTIFY_ME_TRACKS_URL = f"{SPOTIFY_API_BASE_URL}/me/tracks"
 SPOTIFY_ME_ALBUMS_URL = f"{SPOTIFY_API_BASE_URL}/me/albums"
 SPOTIFY_ME_TOP_TRACKS_URL = f"{SPOTIFY_API_BASE_URL}/me/top/tracks"
-SPOTIFY_ARTISTS_URL = f"{SPOTIFY_API_BASE_URL}/artists"
 SPOTIFY_REDIRECT_URI = "http://127.0.0.1:5000/callback"
 SPOTIFY_SCOPES = [
     "playlist-read-private",
@@ -36,8 +35,6 @@ LOGIN_TIMEOUT_SECONDS = 120
 TOKEN_EXPIRY_MARGIN_SECONDS = 60
 # Top tracks are re-read from Spotify after this many hours.
 TOP_TRACKS_MAX_AGE_HOURS = 24
-# Spotify returns at most this many artists for one artists request.
-ARTISTS_PER_REQUEST = 50
 
 
 # --- Related to the caching database ---

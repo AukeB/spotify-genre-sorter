@@ -6,7 +6,7 @@ import pytest
 import requests
 
 from sgs.constants import SPOTIFY_ME_URL
-from sgs.spotify_api import fetch_current_user, fetch_total, get_all_pages, get_artists
+from sgs.spotify_api import fetch_current_user, fetch_total, get_all_pages
 
 
 # Testing the "fetch_current_user" function.
@@ -96,32 +96,3 @@ def test_fetch_total_raises_on_error(mock_get):
 
     with pytest.raises(requests.HTTPError):
         fetch_total("https://api.example/items", "bad-token")
-
-
-# Testing the "get_artists" function.
-
-
-@patch("sgs.spotify_api.requests.get")
-def test_get_artists_sends_ids_in_one_request(mock_get):
-    """The IDs are joined into one request, and the artists keep their order, with None for unknown IDs."""
-    response = MagicMock()
-    response.json.return_value = {"artists": [{"id": "a1", "genres": []}, None]}
-    mock_get.return_value = response
-
-    artists = get_artists(["a1", "a2"], "token-123")
-
-    assert artists == [{"id": "a1", "genres": []}, None]
-    assert mock_get.call_count == 1
-    assert mock_get.call_args.kwargs["params"] == {"ids": "a1,a2"}
-    assert mock_get.call_args.kwargs["headers"] == {"Authorization": "Bearer token-123"}
-
-
-@patch("sgs.spotify_api.requests.get")
-def test_get_artists_raises_on_error(mock_get):
-    """A rejected request raises requests.HTTPError."""
-    response = MagicMock()
-    response.raise_for_status.side_effect = requests.HTTPError("403 Forbidden")
-    mock_get.return_value = response
-
-    with pytest.raises(requests.HTTPError):
-        get_artists(["a1"], "bad-token")

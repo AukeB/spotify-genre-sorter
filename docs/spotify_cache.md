@@ -26,7 +26,7 @@ The cache avoids that repeat work in two ways:
 - **Playlists:** each playlist stores the `snapshot_id` Spotify returned the last time its songs were read. Spotify changes that value whenever the playlist changes. On the next run, a playlist is re-read only if its `snapshot_id` is different.
 - **Liked songs and saved albums:** each saved item stores its `added_at` date. The list is ordered newest first, so a run reads from the top and stops at the first item already cached. A saved album's tracks are fetched once, when the album is first seen.
 - **Top tracks:** the ranking is re-read only when the cached one is older than 24 hours (`TOP_TRACKS_MAX_AGE_HOURS`), because a ranking has no change marker.
-- **Artist genres:** each artist stores when its genres were fetched. An artist is requested only if it has never been fetched.
+- **Artist genres:** the genre tables are in place, but Spotify no longer returns genres to apps in Development mode, so nothing fills them yet. The source for genre data is still to be decided.
 
 Removals are detected by comparing the cached count with the `total` Spotify reports. If they differ, the whole list is read again.
 
@@ -268,7 +268,7 @@ On each run, the app updates the cache in this order:
 3. **Saved albums.** The same as liked songs, using `/me/albums`. Only new albums have their tracks fetched.
 4. **Top tracks.** Re-read the ranking for the configured time range only if it is older than 24 hours.
 5. **Song sources.** Rebuild the `song_sources` rows for each source, so that every cached song is linked to the sources it came from. Only rows that changed are written.
-6. **Genres (not built yet).** Find artists with `genres_fetched_at IS NULL` and fetch their genres. Store the timestamp, even when the list is empty.
+6. **Genres (not built yet).** Genre data will come from a source to be decided. The tables and `genres_fetched_at` stay in place for it.
 7. Run the genre grouping as local queries, without further API calls.
 
 Each playlist and each album is written in one transaction, so an interrupted run never leaves one half-updated.

@@ -2,7 +2,7 @@ sources:
   liked_songs: false
   saved_albums: false
   top_tracks: false
-  your_playlists: false
+  your_playlists: true
 
 options:
   top_tracks_time_range: medium_term

@@ -7,7 +7,6 @@ across the modules in sgs.cache.
 import sqlite3
 from pathlib import Path
 
-from sgs.cache.artist_genre_cache import ArtistGenreCache
 from sgs.cache.library_cache import LikedSongsCache, SavedAlbumsCache
 from sgs.cache.playlist_cache import PlaylistCache
 from sgs.cache.schema import create_schema
@@ -48,7 +47,6 @@ class SpotifyCache:
         _liked_songs (LikedSongsCache): Liked songs sync.
         _saved_albums (SavedAlbumsCache): Saved albums sync.
         _top_tracks (TopTrackCache): Top tracks sync.
-        _artist_genres (ArtistGenreCache): Artist genre sync.
 
     Example:
         >>> with SpotifyCache() as cache:
@@ -85,7 +83,6 @@ class SpotifyCache:
         self._top_tracks = TopTrackCache(
             self._connection, self._stats, track_store, source_links
         )
-        self._artist_genres = ArtistGenreCache(self._connection, self._stats)
 
     def sync_playlists(
         self, access_token: str, user_id: str, include_collaborative: bool
@@ -132,20 +129,6 @@ class SpotifyCache:
         start = self._stats.start_sync()
         self._top_tracks.sync(access_token, time_range)
         self._stats.finish_sync("Top tracks", start)
-
-    def sync_artist_genres(self, access_token: str) -> None:
-        """Fetches the genres of every cached artist that does not have them
-        yet.
-
-        Call this after the source syncs, since it looks at the artists they
-        stored.
-
-        Args:
-            access_token (str): A valid Spotify access token.
-        """
-        start = self._stats.start_sync()
-        self._artist_genres.sync(access_token)
-        self._stats.finish_sync("Artist genres", start)
 
     def get_songs_for_source(self, source_name: str) -> list[Song]:
         """Reads the cached songs that were found in a source.
