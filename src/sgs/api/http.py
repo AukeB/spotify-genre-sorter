@@ -2,7 +2,8 @@
 
 Every request goes through get(), so a rate limit is always reported the same
 way: as RetryableApiError. Functions decorated with retry_api_error are tried
-again after such an error, with the waits set in constants.py.
+again after such an error, or after a timeout or dropped connection, with the
+waits set in constants.py.
 """
 
 import requests
@@ -18,7 +19,7 @@ from sgs.errors import RetryableApiError
 from sgs.utils.retry import retry
 
 retry_api_error = retry(
-    RetryableApiError,
+    (RetryableApiError, requests.Timeout, requests.ConnectionError),
     max_attempts=RATE_LIMIT_MAX_ATTEMPTS,
     base_delay=RATE_LIMIT_BASE_DELAY_SECONDS,
     backoff=RATE_LIMIT_BACKOFF,

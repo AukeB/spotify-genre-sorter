@@ -128,4 +128,3 @@ def test_retry_never_waits_less_than_backoff_when_server_says_zero(monkeypatch):
 
     assert wrapped() == "ok"
     assert sleep.call_args.args[0] == 2.0
-

@@ -22,7 +22,7 @@ R = TypeVar("R")
 
 
 def _delay_seconds(
-    error: Exception,
+    error: BaseException,
     attempt: int,
     base_delay: float,
     backoff: float,
@@ -56,7 +56,7 @@ def _delay_seconds(
 
 
 def retry(
-    exceptions: type[Exception],
+    exceptions: type[Exception] | tuple[type[Exception], ...],
     max_attempts: int,
     base_delay: float,
     backoff: float,
@@ -66,7 +66,8 @@ def retry(
     error.
 
     Args:
-        exceptions (type[Exception]): The error class that triggers a retry.
+        exceptions (type[Exception] | tuple[type[Exception], ...]): The error
+            class, or classes, that trigger a retry.
         max_attempts (int): How many times the function is tried in total.
         base_delay (float): The first wait, in seconds.
         backoff (float): The factor each wait is multiplied by.
