@@ -1,5 +1,6 @@
 """Module for testing spotify_cache.py"""
 
+import logging
 import sqlite3
 from unittest.mock import patch
 
@@ -107,6 +108,37 @@ def test_sync_playlists_skips_tracks_without_id(cache_path):
             songs = cache.get_songs_for_source(PLAYLIST_SOURCE_NAME)
 
     assert [song.id for song in songs] == ["t2"]
+
+
+def test_sync_playlists_counts_changed_song_and_artist_names(cache_path, caplog):
+    """A song or artist whose name changed is counted as changed in the sync summary."""
+    first_track = _track("t1")
+    first_track["artists"] = [{"id": "a1", "name": "Old Artist"}]
+    first_track["name"] = "Old Song"
+
+    second_track = _track("t1")
+    second_track["artists"] = [{"id": "a1", "name": "New Artist"}]
+    second_track["name"] = "New Song"
+
+    with patch(
+        "sgs.spotify_cache.get_all_pages",
+        side_effect=_fake_spotify([_playlist("p1", "s1")], {"p1": [{"item": first_track}]}),
+    ):
+        with SpotifyCache() as cache:
+            cache.sync_playlists("token", user_id="me", include_collaborative=False)
+
+    caplog.set_level(logging.INFO, logger="sgs.spotify_cache")
+
+    with patch(
+        "sgs.spotify_cache.get_all_pages",
+        side_effect=_fake_spotify([_playlist("p1", "s2")], {"p1": [{"item": second_track}]}),
+    ):
+        with SpotifyCache() as cache:
+            cache.sync_playlists("token", user_id="me", include_collaborative=False)
+
+    changed_lines = [record.getMessage() for record in caplog.records if "changed" in record.getMessage()]
+    assert "'songs': 1" in changed_lines[0]
+    assert "'artists': 1" in changed_lines[0]
 
 
 def test_sync_playlists_skips_unchanged_playlist(cache_path):
