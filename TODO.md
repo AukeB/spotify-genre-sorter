@@ -31,6 +31,10 @@
 - [ ] Try an embedding and clustering step, and compare it with a simple tag-count baseline
 - [ ] Use other fields for grouping: MusicBrainz area and life span, Last.fm similar artists, playlist co-occurrence
 - [ ] GUI to replace the CLI and the config file, and terminal output also needs to be available in GUI.
+- [ ] Look into track and album data from Spotify (release date, album type, length, explicit flag), and whether it helps with era and other groupings
+- [ ] Check which track and album fields still come back for this app, since some were removed in February 2026
+- [ ] Potentially store track and album data in the database
+- [ ] Add a way to show everything stored in the database for one track ID (song, artists, playlists, sources, genre responses)
 - [ ] Packaging and distribution
 
 ## Design questions

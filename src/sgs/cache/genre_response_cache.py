@@ -61,6 +61,29 @@ class GenreResponseCache:
 
         return artists
 
+    def _log_start(
+        self, source_label: str, source: str, pending: list[tuple[str, str]]
+    ) -> None:
+        """Logs how many artists are already stored for a source, and how many
+        are left.
+
+        Args:
+            source_label (str): The name shown in the log, such as
+                "MusicBrainz".
+            source (str): MUSICBRAINZ_SOURCE or LASTFM_SOURCE.
+            pending (list[tuple[str, str]]): The artists that still need a
+                request.
+        """
+        total_row = self._connection.execute("SELECT COUNT(*) FROM artists").fetchone()
+        total = total_row[0]
+        already_stored = total - len(pending)
+        logger.info(
+            "%s: %d artists already stored, skipping them. %d to request",
+            source_label,
+            already_stored,
+            len(pending),
+        )
+
     def _store(self, artist_id: str, source: str, result: dict) -> None:
         """Stores the raw response of one source for one artist.
 
@@ -87,7 +110,7 @@ class GenreResponseCache:
         """
         pending = self._pending_artists(MUSICBRAINZ_SOURCE)
         matched = 0
-        logger.info("MusicBrainz: requesting %d artists", len(pending))
+        self._log_start("MusicBrainz", MUSICBRAINZ_SOURCE, pending)
 
         for index, (artist_id, name) in enumerate(pending, start=1):
             result = fetch_musicbrainz_artist(artist_id)
@@ -115,7 +138,7 @@ class GenreResponseCache:
             api_key (str): A Last.fm API key.
         """
         pending = self._pending_artists(LASTFM_SOURCE)
-        logger.info("Last.fm: requesting %d artists", len(pending))
+        self._log_start("Last.fm", LASTFM_SOURCE, pending)
 
         for index, (artist_id, name) in enumerate(pending, start=1):
             result = fetch_lastfm_top_tags(name, api_key)
