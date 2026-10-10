@@ -140,3 +140,18 @@ def test_sync_counts_changed_song_and_artist_names(cache_path, spotify_calls, ca
     changed_lines = [record.getMessage() for record in caplog.records if "changed" in record.getMessage()]
     assert "'songs': 1" in changed_lines[0]
     assert "'artists': 1" in changed_lines[0]
+
+
+# Testing the "sync" method with refresh from the "PlaylistCache" class.
+
+
+def test_sync_with_refresh_reads_unchanged_playlist_again(cache_path, spotify_calls):
+    """With refresh, a playlist whose snapshot did not change is read from Spotify again."""
+    calls = spotify_calls(_responses([_playlist("p1", "s1")], {"p1": [{"item": _track("t1")}]}))
+    _sync()
+
+    with SpotifyCache() as cache:
+        cache.sync_playlists("token", user_id="me", include_collaborative=False, refresh=True)
+
+    item_requests = [call for call in calls.pages.call_args_list if "/items" in call.args[0]]
+    assert len(item_requests) == 2

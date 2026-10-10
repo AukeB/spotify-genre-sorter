@@ -34,6 +34,14 @@ def run(
         "--lastfm-api-key",
         help="Last.fm API key. Skips Last.fm when not given.",
     ),
+    refresh_spotify: bool = typer.Option(
+        False,
+        "--refresh-spotify",
+        help=(
+            "Read the Spotify data again, including items already cached, so that "
+            "raw copies are stored for them. Does not call MusicBrainz or Last.fm."
+        ),
+    ),
 ) -> None:
     """
     Log in to Spotify, collect the songs, and cache the genre data.
@@ -51,7 +59,7 @@ def run(
     logger.info("Logged in as: %s", user["display_name"])
 
     config = ConfigManager().load_config_file()
-    songs = SongSources(config, access_token).get_all_songs()
+    songs = SongSources(config, access_token, refresh_spotify).get_all_songs()
     logger.info("Found %d unique songs", len(songs))
 
     with SpotifyCache() as cache:

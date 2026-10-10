@@ -112,14 +112,16 @@ class TopTrackCache:
 
         self._stats.count_added("top_track_rankings", len(tracks))
 
-    def sync(self, access_token: str, time_range: str) -> None:
+    def sync(self, access_token: str, time_range: str, refresh: bool = False) -> None:
         """Brings the cached top tracks for a time range up to date.
 
         Args:
             access_token (str): A valid Spotify access token.
             time_range (str): The Spotify time range, such as "medium_term".
+            refresh (bool): If True, read the ranking even when it is still
+                fresh.
         """
-        if self._has_fresh_ranking(time_range):
+        if not refresh and self._has_fresh_ranking(time_range):
             logger.info("Top tracks (%s) are up to date, skipping", time_range)
         else:
             self._replace_ranking(time_range, access_token)

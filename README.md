@@ -99,6 +99,7 @@ Give either `--track-id` or `--track-link`, not both. Every field from the datab
 - Everything is saved as it goes, in `data/spotify_cache.db`. If a run stops,
   for example because you cancel it, the next run continues where it stopped and
   skips what is already stored.
+- To store raw Spotify copies for songs that were cached before those tables existed, add `--refresh-spotify`. It reads the Spotify data again, including what is already cached, and makes no MusicBrainz or Last.fm requests. It takes about one request per playlist page and per 50 liked songs, plus one per saved album.
 - Temporary errors from Spotify, MusicBrainz, and Last.fm (rate limits and
   "service unavailable") are retried with increasing waits. If they keep failing,
   the run stops and can be started again later.

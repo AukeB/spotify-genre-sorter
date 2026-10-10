@@ -15,11 +15,20 @@
 - [x] Command-line options for the Spotify client ID and the Last.fm key
 - [x] Module layout: `api/`, `cache/`, `config/`, `utils/`
 - [x] README updated to match current behaviour
+- [x] `run` and `track` subcommands in `main.py`
+- [x] `track` command shows everything stored for one track, from a track ID or link
+- [x] `--refresh-spotify` re-reads Spotify data to store raw copies for cached items
+- [x] Retry also covers network timeouts and dropped connections
+- [x] Full first run finished for MusicBrainz and Last.fm, with no missing artists
+- [x] Raw copies stored for all songs, artists, and albums in the cache
+- [x] Branch coverage in `make pytest`, with 100% coverage
+- [x] Removed the old exploration script
 
 ## Next
 
-- [ ] Verify the first full run against the live APIs
-- [ ] Confirm the Last.fm rate-limit error code (29) and invalid-key code (10) against real responses
+- [x] Verify the first full run against the live APIs
+- [x] Confirm the Last.fm rate-limit error code (29) and invalid-key code (10) against real responses (documented by Last.fm: 10 is an invalid API key, 29 is an IP rate limit; about 3,600 requests so far, none returned 29)
+- [ ] Decide whether Last.fm temporary errors (8 "operation failed", 11 "service offline", 16 "temporarily unavailable") should be retried, like 29, or stored as `error` rows
 - [ ] Decide how to parse the stored responses into `genres` and `artist_genres`
 - [ ] Compare MusicBrainz genres with Last.fm tags on a sample of artists
 - [ ] Build the first version of the grouping step
@@ -52,3 +61,4 @@
 - [ ] **Writing to Spotify:** creating playlists needs a new scope. Which playlists are created, and is any existing playlist changed?
 - [ ] **Refresh:** how old may a stored response be before it is fetched again?
 - [ ] **Songs without genre data:** put them in their own playlist, or leave them out?
+- [ ] **Last.fm temporary errors:** retry codes 8, 11, and 16 like the rate limit (29), or store them as `error` rows and leave them? Retrying costs requests; storing them means an outage can leave permanent gaps.

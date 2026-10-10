@@ -202,3 +202,24 @@ def test_base_library_cache_requires_subclass_methods():
 
     connection.close()
 
+
+
+# Testing the "sync" method with refresh from the "LikedSongsCache" class.
+
+
+def test_liked_songs_refresh_restores_raw_copies_of_cached_tracks(cache_path, spotify_calls):
+    """With refresh, every liked track is read again, so missing raw copies are stored."""
+    spotify_calls({SPOTIFY_ME_TRACKS_URL: [_saved("t1", "2026-01-01")]})
+    _sync_liked()
+
+    with SpotifyCache() as cache:
+        cache._connection.execute("DELETE FROM raw_tracks")
+        cache._connection.commit()
+
+    spotify_calls({SPOTIFY_ME_TRACKS_URL: [_saved("t1", "2026-01-01")]})
+
+    with SpotifyCache() as cache:
+        cache.sync_liked_songs("token", refresh=True)
+        raw_count = cache._connection.execute("SELECT COUNT(*) FROM raw_tracks").fetchone()[0]
+
+    assert raw_count == 1

@@ -168,16 +168,18 @@ class PlaylistCache:
                     (playlist["id"], position, track["id"]),
                 )
 
-    def _sync_playlist(self, playlist: dict, access_token: str) -> None:
+    def _sync_playlist(self, playlist: dict, access_token: str, refresh: bool) -> None:
         """Reads a playlist's songs from Spotify unless the cache is up to date.
 
         Args:
             playlist (dict): The playlist object from Spotify.
             access_token (str): A valid Spotify access token.
+            refresh (bool): If True, read the playlist even when its snapshot is
+                unchanged.
         """
         stored_snapshot_id = self._read_snapshot_id(playlist["id"])
 
-        if stored_snapshot_id == playlist["snapshot_id"]:
+        if not refresh and stored_snapshot_id == playlist["snapshot_id"]:
             cached_count = self._count_cached_songs(playlist["id"])
             logger.info(
                 "Playlist unchanged, skipping: %s (%d cached songs)",
@@ -218,7 +220,11 @@ class PlaylistCache:
             )
 
     def sync(
-        self, access_token: str, user_id: str, include_collaborative: bool
+        self,
+        access_token: str,
+        user_id: str,
+        include_collaborative: bool,
+        refresh: bool = False,
     ) -> None:
         """Brings the cached playlists up to date with the Spotify account.
 
@@ -244,7 +250,7 @@ class PlaylistCache:
         )
 
         for playlist in readable:
-            self._sync_playlist(playlist, access_token)
+            self._sync_playlist(playlist, access_token, refresh)
 
         readable_ids = [playlist["id"] for playlist in readable]
         self._remove_unreadable(readable_ids)

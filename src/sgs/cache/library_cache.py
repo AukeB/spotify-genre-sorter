@@ -181,12 +181,14 @@ class LibraryCache:
         """
         return None
 
-    def _collect_new_items(self, pages: Iterable[dict]) -> list[dict]:
+    def _collect_new_items(self, pages: Iterable[dict], refresh: bool) -> list[dict]:
         """Collects the items added since the last sync, from the top of the
         list.
 
         Args:
             pages (Iterable[dict]): Items in list order, newest first.
+            refresh (bool): If True, every item is collected, not just the new
+                ones.
 
         Returns:
             new_items (list[dict]): The items that are not cached yet.
@@ -199,7 +201,7 @@ class LibraryCache:
             if item_id is None:
                 continue
 
-            if self._is_known(item_id, item["added_at"]):
+            if not refresh and self._is_known(item_id, item["added_at"]):
                 break
 
             new_items.append(item)
@@ -234,18 +236,20 @@ class LibraryCache:
 
         self._on_removed(removed_ids)
 
-    def sync(self, access_token: str) -> None:
+    def sync(self, access_token: str, refresh: bool = False) -> None:
         """Brings the cached items up to date with the Spotify account.
 
         Args:
             access_token (str): A valid Spotify access token.
+            refresh (bool): If True, read every item again, including items
+                already cached, so their raw copies are stored.
         """
         total = fetch_total(self._list_url, access_token)
         pages = get_all_pages(
             self._list_url, access_token, description=self._label.lower()
         )
 
-        new_items = self._collect_new_items(pages)
+        new_items = self._collect_new_items(pages, refresh)
 
         for item in new_items:
             self._store_item(item, access_token)

@@ -36,14 +36,19 @@ class SongSources:
         >>> songs = SongSources(config, access_token).get_all_songs()
     """
 
-    def __init__(self, config: ConfigModel, access_token: str) -> None:
+    def __init__(
+        self, config: ConfigModel, access_token: str, refresh_spotify: bool = False
+    ) -> None:
         """Initializes the sources with the settings from the config.
 
         Args:
             config (ConfigModel): The loaded configuration.
             access_token (str): A valid Spotify access token.
+            refresh_spotify (bool): If True, read every Spotify source again,
+                including items already cached.
         """
         self._access_token = access_token
+        self._refresh_spotify = refresh_spotify
         self._liked_songs_enabled = config.sources.liked_songs
         self._saved_albums_enabled = config.sources.saved_albums
         self._top_tracks_enabled = config.sources.top_tracks
@@ -62,7 +67,7 @@ class SongSources:
             songs (list[Song]): The liked songs.
         """
         with SpotifyCache() as cache:
-            cache.sync_liked_songs(self._access_token)
+            cache.sync_liked_songs(self._access_token, self._refresh_spotify)
 
             songs = cache.get_songs_for_source(LIKED_SOURCE_NAME)
 
@@ -79,7 +84,7 @@ class SongSources:
             songs (list[Song]): The tracks from all saved albums.
         """
         with SpotifyCache() as cache:
-            cache.sync_saved_albums(self._access_token)
+            cache.sync_saved_albums(self._access_token, self._refresh_spotify)
 
             songs = cache.get_songs_for_source(SAVED_ALBUMS_SOURCE_NAME)
 
@@ -95,7 +100,11 @@ class SongSources:
             songs (list[Song]): The top tracks.
         """
         with SpotifyCache() as cache:
-            cache.sync_top_tracks(self._access_token, self._top_tracks_time_range)
+            cache.sync_top_tracks(
+                self._access_token,
+                self._top_tracks_time_range,
+                self._refresh_spotify,
+            )
 
             songs = cache.get_songs_for_source(TOP_TRACKS_SOURCE_NAME)
 
@@ -118,6 +127,7 @@ class SongSources:
                 self._access_token,
                 user_id,
                 self._include_collaborative_playlists,
+                self._refresh_spotify,
             )
 
             songs = cache.get_songs_for_source(PLAYLIST_SOURCE_NAME)

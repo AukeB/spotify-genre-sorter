@@ -84,3 +84,17 @@ def test_sync_skips_null_entries(cache_path, spotify_calls):
     songs = _sync_top()
 
     assert [song.id for song in songs] == ["t1"]
+
+
+# Testing the "sync" method with refresh from the "TopTrackCache" class.
+
+
+def test_sync_with_refresh_requests_fresh_ranking_again(cache_path, spotify_calls):
+    """With refresh, a ranking that is still fresh is requested from Spotify again."""
+    calls = spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    _sync_top()
+
+    with SpotifyCache() as cache:
+        cache.sync_top_tracks("token", "medium_term", refresh=True)
+
+    assert calls.pages.call_count == 2

@@ -91,7 +91,11 @@ class SpotifyCache:
         self._genre_responses = GenreResponseCache(self._connection, self._stats)
 
     def sync_playlists(
-        self, access_token: str, user_id: str, include_collaborative: bool
+        self,
+        access_token: str,
+        user_id: str,
+        include_collaborative: bool,
+        refresh: bool = False,
     ) -> None:
         """Brings the cached playlists up to date with the Spotify account.
 
@@ -100,40 +104,46 @@ class SpotifyCache:
             user_id (str): The ID of the logged-in user.
             include_collaborative (bool): Whether collaborative playlists owned
                 by other users should be read.
+            refresh (bool): If True, read the data again even if it is cached.
         """
         start = self._stats.start_sync()
-        self._playlists.sync(access_token, user_id, include_collaborative)
+        self._playlists.sync(access_token, user_id, include_collaborative, refresh)
         self._stats.finish_sync("Playlist", start)
 
-    def sync_liked_songs(self, access_token: str) -> None:
+    def sync_liked_songs(self, access_token: str, refresh: bool = False) -> None:
         """Brings the cached liked songs up to date with the Spotify account.
 
         Args:
             access_token (str): A valid Spotify access token.
+            refresh (bool): If True, read the data again even if it is cached.
         """
         start = self._stats.start_sync()
-        self._liked_songs.sync(access_token)
+        self._liked_songs.sync(access_token, refresh)
         self._stats.finish_sync("Liked songs", start)
 
-    def sync_saved_albums(self, access_token: str) -> None:
+    def sync_saved_albums(self, access_token: str, refresh: bool = False) -> None:
         """Brings the cached saved albums up to date with the Spotify account.
 
         Args:
             access_token (str): A valid Spotify access token.
+            refresh (bool): If True, read the data again even if it is cached.
         """
         start = self._stats.start_sync()
-        self._saved_albums.sync(access_token)
+        self._saved_albums.sync(access_token, refresh)
         self._stats.finish_sync("Saved albums", start)
 
-    def sync_top_tracks(self, access_token: str, time_range: str) -> None:
+    def sync_top_tracks(
+        self, access_token: str, time_range: str, refresh: bool = False
+    ) -> None:
         """Brings the cached top tracks for a time range up to date.
 
         Args:
             access_token (str): A valid Spotify access token.
             time_range (str): The Spotify time range, such as "medium_term".
+            refresh (bool): If True, read the data again even if it is cached.
         """
         start = self._stats.start_sync()
-        self._top_tracks.sync(access_token, time_range)
+        self._top_tracks.sync(access_token, time_range, refresh)
         self._stats.finish_sync("Top tracks", start)
 
     def sync_genre_responses(self, lastfm_api_key: str | None) -> None:
