@@ -13,7 +13,7 @@ from sgs.errors import SpotifyAuthError
 MODULE = "sgs.authentication.authentication"
 
 
-def _token(expires_in=3600, refresh_token="refresh-1"):
+def _token(expires_in: int = 3600, refresh_token: str | None = "refresh-1"):
     """Builds a TokenInfo that expires after the given number of seconds."""
     token = TokenInfo(
         access_token="access-1",

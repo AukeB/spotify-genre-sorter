@@ -36,7 +36,7 @@ clean:
 		-name '.pytest_cache' \
 	\) -exec rm -rf {} +
 	@rm -f .coverage .python-version
-	@rm -rf artifacts
+	@rm -rf artifacts dist
 	@echo "🧹 Successfully cleaned project."
 
 # Commit and push everything to git

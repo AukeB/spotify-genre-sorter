@@ -1,12 +1,14 @@
 """Reads songs from the sources enabled in config.yaml."""
 
 import logging
+import time
 from collections.abc import Iterable
 
 from sgs.config_model import ConfigModel
 from sgs.constants import SPOTIFY_API_BASE_URL
 from sgs.models import Song
 from sgs.spotify_api import fetch_current_user, get_all_pages
+from sgs.spotify_cache import PLAYLIST_SOURCE_NAME, SpotifyCache
 
 logger = logging.getLogger(__name__)
 
@@ -78,33 +80,6 @@ class SongSources:
             config.options.include_collaborative_playlists
         )
 
-    def _is_readable_playlist(self, playlist: dict, user_id: str) -> bool:
-        """Checks whether the playlist's items can be read.
-
-        A playlist is readable when either of these is true:
-        1. The logged-in user owns it.
-        2. It is collaborative and `include_collaborative_playlists` is enabled.
-
-        Playlists the user only follows are not readable, because Spotify
-        returns 403 for their items.
-
-        Args:
-            playlist (dict): A playlist object from the current-user playlists
-                endpoint.
-            user_id (str): The ID of the logged-in user.
-
-        Returns:
-            readable (bool): True if the playlist meets one of the conditions
-                above.
-        """
-        is_owner = playlist["owner"]["id"] == user_id
-        is_collaborative = (
-            playlist["collaborative"] and self._include_collaborative_playlists
-        )
-        readable = is_owner or is_collaborative
-
-        return readable
-
     def _fetch_liked_songs(self) -> list[Song]:
         """Reads the tracks in the user's library.
 
@@ -129,6 +104,8 @@ class SongSources:
         items = get_all_pages(f"{SPOTIFY_API_BASE_URL}/me/albums", self._access_token)
         albums = [item["album"] for item in items]
 
+        logger.info("Found %d saved albums", len(albums))
+
         songs = []
 
         for album in albums:
@@ -137,6 +114,7 @@ class SongSources:
                 self._access_token,
             )
             album_songs = _to_songs(album_tracks, "saved_albums")
+            logger.info("Album %s: %d tracks", album["name"], len(album_songs))
             songs.extend(album_songs)
 
         return songs
@@ -158,41 +136,25 @@ class SongSources:
         return songs
 
     def _fetch_your_playlists(self) -> list[Song]:
-        """Reads the tracks from the user's playlists.
+        """Reads the tracks from the user's playlists through the local cache.
 
-        Only playlists the user owns are read, plus collaborative playlists when
-        `include_collaborative_playlists` is enabled. Spotify does not allow
-        reading the other playlists the user follows.
+        The cache re-reads only playlists that changed since the last run. Only
+        playlists the user owns are read, plus collaborative playlists when
+        `include_collaborative_playlists` is enabled.
 
         Returns:
             songs (list[Song]): The tracks from the readable playlists.
         """
         user_id = fetch_current_user(self._access_token)["id"]
-        playlists = get_all_pages(
-            f"{SPOTIFY_API_BASE_URL}/me/playlists", self._access_token
-        )
 
-        songs = []
-
-        for playlist in playlists:
-            if not self._is_readable_playlist(playlist, user_id):
-                continue
-
-            entries = get_all_pages(
-                f"{SPOTIFY_API_BASE_URL}/playlists/{playlist['id']}/items",
+        with SpotifyCache() as cache:
+            cache.sync_playlists(
                 self._access_token,
+                user_id,
+                self._include_collaborative_playlists,
             )
-            tracks = []
 
-            for entry in entries:
-                item = entry.get("item")
-                if item is None or entry.get("is_local") or item.get("type") != "track":
-                    continue
-
-                tracks.append(item)
-
-            playlist_songs = _to_songs(tracks, "your_playlists")
-            songs.extend(playlist_songs)
+            songs = cache.get_songs_for_source(PLAYLIST_SOURCE_NAME)
 
         return songs
 
@@ -215,12 +177,21 @@ class SongSources:
 
         songs_by_id: dict[str, Song] = {}
 
+        start = time.perf_counter()
+
         for enabled, fetch in enabled_fetchers:
             if not enabled:
                 continue
 
+            start = time.perf_counter()
             songs = fetch()
-            logger.info("Read %d songs from %s", len(songs), fetch.__name__)
+            elapsed = time.perf_counter() - start
+            logger.info(
+                "Read %d songs from %s in %.2f s",
+                len(songs),
+                fetch.__name__,
+                elapsed,
+            )
 
             for song in songs:
                 existing = songs_by_id.get(song.id)
@@ -231,5 +202,8 @@ class SongSources:
                     existing.sources |= song.sources
 
         all_songs = list(songs_by_id.values())
+
+        elapsed = time.perf_counter() - start
+        logger.info("Total song collection took %.2f s", elapsed)
 
         return all_songs

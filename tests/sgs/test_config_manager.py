@@ -23,6 +23,7 @@ def test_load_config_file(mock_config):
     assert mock_config.options.top_tracks_time_range == "long_term"
     assert mock_config.options.include_collaborative_playlists is False
 
+
 # Testing the "load_config_file" method from the "ConfigManager" class with an invalid option.
 
 

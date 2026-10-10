@@ -34,3 +34,11 @@ def test_load_conig_file(mock_yaml_content):
         config = config_manager.load_config_file()
 
     return config
+
+@pytest.fixture(scope="function", name="cache_path")
+def fixture_cache_path(tmp_path, monkeypatch):
+    """Points the Spotify cache at a temporary file for one test."""
+    path = tmp_path / "spotify_cache.db"
+    monkeypatch.setattr("sgs.spotify_cache.CACHE_DB_PATH", path)
+
+    return path

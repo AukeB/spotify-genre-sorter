@@ -27,6 +27,7 @@ Python 3.12, managed with `uv`.
 - Put custom exceptions in `src/sgs/errors.py`.
 - Put Spotify authentication code in `src/sgs/authentication/`. `SpotifyAuthenticator` stays in `authentication.py`; token models, helpers, and the callback server live in their own modules.
 - Keep tokens in memory only. Do not write them to disk or log them.
+- Always be explicit with types. Avoid `Any` whenever possible, and annotate function parameters, return values, and attributes with specific types (for example `dict[str, Any]` only when the shape truly cannot be known, and a Pydantic model or `TypedDict` when it can).
 - Do not use `print()` anywhere in the codebase. Output goes through `logging`, and the codebase should keep a proper logging setup: each module gets `logger = logging.getLogger(__name__)`, and logging is configured once in the entry point (`main.py`), inside the `if __name__ == "__main__":` block.
 
 ## Configuration conventions

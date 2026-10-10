@@ -1,0 +1,208 @@
+# Spotify cache database
+
+This document describes the SQLite database that caches the parts of your Spotify library the genre sorter needs. It explains the tables, how they connect, and why the cache exists.
+
+The code that creates and fills this database is in `src/sgs/spotify_cache.py`. The database file is `data/spotify_cache.db`.
+
+## Why a cache
+
+Spotify's API is slow when you ask for many songs. Your playlists hold thousands of songs, and each playlist's items come back in pages of 50, so reading everything takes many requests on every run. Most of those playlists haven't changed since the last run, so most of those requests return data we already have.
+
+The cache avoids that repeat work in two ways:
+
+- **Playlists:** each playlist stores the `snapshot_id` Spotify returned the last time its songs were read. Spotify changes that value whenever the playlist changes. On the next run, a playlist is re-read only if its `snapshot_id` is different.
+- **Artist genres:** each artist stores when its genres were fetched. An artist is requested only if it has never been fetched.
+
+## A subset of the Spotify data
+
+The database is not a copy of your Spotify account. It stores only the songs, artists, and playlists this app needs to group songs by genre. It drops the rest, such as album art, follower counts, and playback details.
+
+Think of it as a subset of the Spotify data, shaped for the questions the app asks. Those questions are:
+
+- Which songs are in each playlist, and in what order?
+- Which artists made each song?
+- Which genres belong to each artist?
+
+Because the tables are linked by shared key columns, the answers come from local queries, not from new API calls.
+
+## Key colors and legend
+
+Markdown on GitHub cannot color text, so the tables use colored markers instead.
+
+| Marker | Meaning |
+|---|---|
+| 🟦 | **Primary key**: uniquely identifies a row in this table |
+| 🟧 | **Foreign key**: refers to a primary key in another table |
+| 🟩 | **Join key**: a column shared by two tables, used to combine them |
+| ⬜ | Regular column |
+
+Key columns use the same name in every table. For example, `song_id` is the primary key of `songs` and a foreign key in `song_artists`, `playlist_songs`, and `song_sources`. If two tables share a column name, you can join them on that column.
+
+## Entity relationship diagram
+
+```mermaid
+erDiagram
+    songs ||--o{ song_artists : "has"
+    artists ||--o{ song_artists : "performs"
+    artists ||--o{ artist_genres : "has"
+    genres ||--o{ artist_genres : "describes"
+    playlists ||--o{ playlist_songs : "contains"
+    songs ||--o{ playlist_songs : "appears in"
+    songs ||--o{ song_sources : "comes from"
+
+    songs {
+        TEXT song_id PK
+        TEXT name
+        TEXT uri
+    }
+    artists {
+        TEXT artist_id PK
+        TEXT name
+        TIMESTAMP genres_fetched_at
+    }
+    genres {
+        TEXT genre_name PK
+    }
+    artist_genres {
+        TEXT artist_id PK, FK
+        TEXT genre_name PK, FK
+    }
+    song_artists {
+        TEXT song_id PK, FK
+        TEXT artist_id PK, FK
+        INTEGER position
+    }
+    playlists {
+        TEXT playlist_id PK
+        TEXT name
+        TEXT owner_id
+        BOOLEAN collaborative
+        TEXT snapshot_id
+        TIMESTAMP synced_at
+    }
+    playlist_songs {
+        TEXT playlist_id PK, FK
+        INTEGER position PK
+        TEXT song_id FK
+    }
+    song_sources {
+        TEXT song_id PK, FK
+        TEXT source_name PK
+    }
+```
+
+## Tables
+
+### songs
+
+One row per Spotify track. Different releases of the same song have different `song_id` values, so they stay separate.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `song_id` | TEXT | 🟦 PK | Spotify track ID |
+| `name` | TEXT | | Track title |
+| `uri` | TEXT | | Spotify URI, such as `spotify:track:...` |
+
+### artists
+
+One row per Spotify artist. Genres are attached to artists, not to songs.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `artist_id` | TEXT | 🟦 PK | Spotify artist ID |
+| `name` | TEXT | | Artist name |
+| `genres_fetched_at` | TIMESTAMP | | When the genres were last fetched. `NULL` means never fetched. An empty genre list is a valid, cached answer. |
+
+### genres
+
+One row per genre name, such as `dream pop`. This table exists so that each genre name is stored once.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `genre_name` | TEXT | 🟦 PK | Genre name as Spotify returns it |
+
+### artist_genres
+
+Links artists to genres. An artist can have many genres, and a genre can belong to many artists.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `artist_id` | TEXT | 🟦🟧 PK, FK | Refers to `artists.artist_id` |
+| `genre_name` | TEXT | 🟦🟧 PK, FK | Refers to `genres.genre_name` |
+
+### song_artists
+
+Links songs to artists. A song can have several artists, and `position` keeps their order.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `song_id` | TEXT | 🟦🟧 PK, FK | Refers to `songs.song_id` |
+| `artist_id` | TEXT | 🟦🟧 PK, FK | Refers to `artists.artist_id` |
+| `position` | INTEGER | | Order of the artist on the song. `0` is the primary artist. |
+
+### playlists
+
+One row per playlist you can read. `snapshot_id` tells the cache whether the playlist has changed.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `playlist_id` | TEXT | 🟦 PK | Spotify playlist ID |
+| `name` | TEXT | | Playlist name |
+| `owner_id` | TEXT | | Spotify user ID of the owner |
+| `collaborative` | BOOLEAN | | Whether the playlist is collaborative |
+| `snapshot_id` | TEXT | | Version of the playlist when its songs were last read |
+| `synced_at` | TIMESTAMP | | When this app last read the playlist's songs |
+
+### playlist_songs
+
+Links playlists to songs, in playlist order. The same song can appear more than once in a playlist, so the key is `position`, not `song_id`.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `playlist_id` | TEXT | 🟦🟧 PK, FK | Refers to `playlists.playlist_id` |
+| `position` | INTEGER | 🟦 PK | Position of the entry in the playlist |
+| `song_id` | TEXT | 🟧 FK | Refers to `songs.song_id` |
+
+### song_sources
+
+Records where each song was found. A song can come from several sources, and this table keeps all of them.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `song_id` | TEXT | 🟦🟧 PK, FK | Refers to `songs.song_id` |
+| `source_name` | TEXT | 🟦 PK | One of `liked_songs`, `saved_albums`, `top_tracks`, `your_playlists` |
+
+## Join keys
+
+These are the columns used to combine tables:
+
+| Join | Columns | Used for |
+|---|---|---|
+| Songs to artists | `song_artists.song_id` → `songs.song_id` | Artists on a song |
+| Artists to genres | `artist_genres.artist_id` → `artists.artist_id` | Genres of an artist |
+| Playlists to songs | `playlist_songs.playlist_id` → `playlists.playlist_id` | Songs in a playlist |
+| Songs to sources | `song_sources.song_id` → `songs.song_id` | Where a song came from |
+| Genres to artists | `artist_genres.genre_name` → `genres.genre_name` | Artists in a genre |
+
+Following these joins from a song to its genres is the core query of the genre step:
+
+```
+songs → song_artists → artists → artist_genres → genres
+```
+
+## Sync flow
+
+On each run, the app updates the cache in this order:
+
+1. Read `/me/playlists`. For each playlist, compare `snapshot_id` with the stored value.
+2. For each changed playlist, read its items and replace its rows in `playlist_songs`. Also add any new songs and artists to their tables, and update `synced_at`.
+3. Find artists with `genres_fetched_at IS NULL` and fetch their genres. Store the timestamp, even when the list is empty.
+4. Run the genre grouping as local queries, without further API calls.
+
+Each playlist is written in one transaction, so an interrupted run never leaves a playlist half-updated.
+
+## Notes
+
+- Tokens are not stored in this database. Only song, artist, playlist, and genre data is saved.
+- The database file belongs under `data/`, which is already in `.gitignore`.
+- The old JSON caches in `spotify-utils/` and the notebooks can be imported into `artists` and `artist_genres` once the database exists.

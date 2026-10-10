@@ -38,7 +38,7 @@ def _track(track_id):
         "name": f"Song {track_id}",
         "uri": f"spotify:track:{track_id}",
         "type": "track",
-        "artists": [{"id": "artist-1"}],
+        "artists": [{"id": "artist-1", "name": "Artist 1"}],
     }
 
     return track
@@ -47,7 +47,7 @@ def _track(track_id):
 def _fake_get_all_pages(responses):
     """Returns a stand-in for get_all_pages that serves items keyed by URL."""
 
-    def fake(url, access_token, params=None):
+    def fake(url, access_token, params=None, description=None):
         items = responses.get(url, [])
         copied = list(items)
 
@@ -76,7 +76,7 @@ def test_liked_songs_skips_unavailable_tracks():
 def test_saved_albums_reads_every_album_track():
     """Tracks come from each saved album's own track list."""
     responses = {
-        ALBUMS_URL: [{"album": {"id": "a1"}}],
+        ALBUMS_URL: [{"album": {"id": "a1", "name": "Album 1"}}],
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1"), _track("t2")],
     }
 
@@ -108,9 +108,9 @@ def _playlist_responses():
     """Playlists owned by me, followed from someone else, and collaborative with someone else."""
     responses = {
         PLAYLISTS_URL: [
-            {"id": "p1", "owner": {"id": "me"}, "collaborative": False},
-            {"id": "p2", "owner": {"id": "other"}, "collaborative": False},
-            {"id": "p3", "owner": {"id": "other"}, "collaborative": True},
+            {"id": "p1", "name": "P1", "snapshot_id": "s1", "owner": {"id": "me"}, "collaborative": False},
+            {"id": "p2", "name": "P2", "snapshot_id": "s2", "owner": {"id": "other"}, "collaborative": False},
+            {"id": "p3", "name": "P3", "snapshot_id": "s3", "owner": {"id": "other"}, "collaborative": True},
         ],
         f"{SPOTIFY_API_BASE_URL}/playlists/p1/items": [
             {"item": _track("t1")},
@@ -124,12 +124,12 @@ def _playlist_responses():
     return responses
 
 
-def test_playlists_only_reads_owned_playlists_when_collaborative_disabled():
+def test_playlists_only_reads_owned_playlists_when_collaborative_disabled(cache_path):
     """Followed playlists are never read. Collaborative playlists are read only when enabled."""
     responses = _playlist_responses()
 
     with patch("sgs.song_sources.fetch_current_user", return_value={"id": "me"}), patch(
-        "sgs.song_sources.get_all_pages", side_effect=_fake_get_all_pages(responses)
+        "sgs.spotify_cache.get_all_pages", side_effect=_fake_get_all_pages(responses)
     ):
         songs = SongSources(_config(playlists=True, collaborative=False), "token").get_all_songs()
 
@@ -137,12 +137,12 @@ def test_playlists_only_reads_owned_playlists_when_collaborative_disabled():
     assert songs[0].sources == {"your_playlists"}
 
 
-def test_playlists_reads_collaborative_playlists_when_enabled():
+def test_playlists_reads_collaborative_playlists_when_enabled(cache_path):
     """Collaborative playlists owned by others are read when enabled. Skips null, local, and episode items."""
     responses = _playlist_responses()
 
     with patch("sgs.song_sources.fetch_current_user", return_value={"id": "me"}), patch(
-        "sgs.song_sources.get_all_pages", side_effect=_fake_get_all_pages(responses)
+        "sgs.spotify_cache.get_all_pages", side_effect=_fake_get_all_pages(responses)
     ):
         songs = SongSources(_config(playlists=True, collaborative=True), "token").get_all_songs()
 
