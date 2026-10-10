@@ -2,47 +2,19 @@
 
 import logging
 import time
-from collections.abc import Iterable
 
 from sgs.config_model import ConfigModel
-from sgs.constants import SPOTIFY_API_BASE_URL
+from sgs.constants import (
+    LIKED_SOURCE_NAME,
+    PLAYLIST_SOURCE_NAME,
+    SAVED_ALBUMS_SOURCE_NAME,
+    TOP_TRACKS_SOURCE_NAME,
+)
 from sgs.models import Song
-from sgs.spotify_api import fetch_current_user, get_all_pages
-from sgs.spotify_cache import PLAYLIST_SOURCE_NAME, SpotifyCache
+from sgs.spotify_api import fetch_current_user
+from sgs.spotify_cache import SpotifyCache
 
 logger = logging.getLogger(__name__)
-
-
-def _to_songs(tracks: Iterable[dict | None], source: str) -> list[Song]:
-    """Converts Spotify track objects into Song models.
-
-    Args:
-        tracks (Iterable[dict | None]): Track objects. Missing or unavailable
-            tracks are skipped.
-        source (str): The config source name to record on each song.
-
-    Returns:
-        songs (list[Song]): The songs that have a track ID.
-    """
-    songs = []
-
-    for track in tracks:
-        if track is None or track.get("id") is None:
-            continue
-
-        artist_ids = [artist["id"] for artist in track["artists"]]
-
-        song = Song(
-            id=track["id"],
-            name=track["name"],
-            uri=track["uri"],
-            artist_ids=artist_ids,
-            sources={source},
-        )
-
-        songs.append(song)
-
-    return songs
 
 
 class SongSources:
@@ -81,57 +53,50 @@ class SongSources:
         )
 
     def _fetch_liked_songs(self) -> list[Song]:
-        """Reads the tracks in the user's library.
+        """Reads the tracks in the user's library through the local cache.
+
+        Only tracks added since the last run are read from Spotify.
 
         Returns:
             songs (list[Song]): The liked songs.
         """
-        items = get_all_pages(f"{SPOTIFY_API_BASE_URL}/me/tracks", self._access_token)
-        tracks = [item["track"] for item in items]
-        songs = _to_songs(tracks, "liked_songs")
+        with SpotifyCache() as cache:
+            cache.sync_liked_songs(self._access_token)
+
+            songs = cache.get_songs_for_source(LIKED_SOURCE_NAME)
 
         return songs
 
     def _fetch_saved_albums(self) -> list[Song]:
-        """Reads every track from the user's saved albums.
+        """Reads every track from the user's saved albums through the local
+        cache.
 
-        Each album's track list is fetched separately, so albums longer than one
-        page are read in full.
+        Only albums added since the last run have their tracks read from
+        Spotify.
 
         Returns:
             songs (list[Song]): The tracks from all saved albums.
         """
-        items = get_all_pages(f"{SPOTIFY_API_BASE_URL}/me/albums", self._access_token)
-        albums = [item["album"] for item in items]
+        with SpotifyCache() as cache:
+            cache.sync_saved_albums(self._access_token)
 
-        logger.info("Found %d saved albums", len(albums))
-
-        songs = []
-
-        for album in albums:
-            album_tracks = get_all_pages(
-                f"{SPOTIFY_API_BASE_URL}/albums/{album['id']}/tracks",
-                self._access_token,
-            )
-            album_songs = _to_songs(album_tracks, "saved_albums")
-            logger.info("Album %s: %d tracks", album["name"], len(album_songs))
-            songs.extend(album_songs)
+            songs = cache.get_songs_for_source(SAVED_ALBUMS_SOURCE_NAME)
 
         return songs
 
     def _fetch_top_tracks(self) -> list[Song]:
-        """Reads the user's top tracks for the configured time range.
+        """Reads the user's top tracks through the local cache.
+
+        The ranking is read from Spotify again only when the cached one is older
+        than TOP_TRACKS_MAX_AGE_HOURS.
 
         Returns:
             songs (list[Song]): The top tracks.
         """
-        items = get_all_pages(
-            f"{SPOTIFY_API_BASE_URL}/me/top/tracks",
-            self._access_token,
-            params={"time_range": self._top_tracks_time_range},
-        )
+        with SpotifyCache() as cache:
+            cache.sync_top_tracks(self._access_token, self._top_tracks_time_range)
 
-        songs = _to_songs(items, "top_tracks")
+            songs = cache.get_songs_for_source(TOP_TRACKS_SOURCE_NAME)
 
         return songs
 
@@ -177,7 +142,7 @@ class SongSources:
 
         songs_by_id: dict[str, Song] = {}
 
-        start = time.perf_counter()
+        total_start = time.perf_counter()
 
         for enabled, fetch in enabled_fetchers:
             if not enabled:
@@ -203,7 +168,7 @@ class SongSources:
 
         all_songs = list(songs_by_id.values())
 
-        elapsed = time.perf_counter() - start
-        logger.info("Total song collection took %.2f s", elapsed)
+        total_elapsed = time.perf_counter() - total_start
+        logger.info("Total song collection took %.2f s", total_elapsed)
 
         return all_songs

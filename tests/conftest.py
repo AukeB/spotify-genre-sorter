@@ -1,6 +1,9 @@
 """Module conftest.py, reusable code for pytest."""
 
 
+from types import SimpleNamespace
+from unittest.mock import MagicMock
+
 import pytest
 from unittest.mock import patch, mock_open
 from pathlib import Path
@@ -42,3 +45,56 @@ def fixture_cache_path(tmp_path, monkeypatch):
     monkeypatch.setattr("sgs.spotify_cache.CACHE_DB_PATH", path)
 
     return path
+
+
+CACHE_SPOTIFY_MODULES = [
+    "sgs.cache.playlist_cache",
+    "sgs.cache.library_cache",
+    "sgs.cache.top_track_cache",
+]
+
+
+def _serve_pages(responses):
+    """Returns a stand-in for get_all_pages that serves items keyed by URL."""
+
+    def fake(url, access_token, params=None, description=None):
+        items = list(responses.get(url, []))
+
+        return items
+
+    return fake
+
+
+def _serve_total(responses):
+    """Returns a stand-in for fetch_total that counts the items served for a URL."""
+
+    def fake(url, access_token):
+        total = len(responses.get(url, []))
+
+        return total
+
+    return fake
+
+
+@pytest.fixture(scope="function", name="spotify_calls")
+def fixture_spotify_calls(monkeypatch):
+    """Serves Spotify responses to the cache, keyed by URL, and records the calls.
+
+    Call the returned function with a dict of responses. It returns an object
+    with the mocks as `pages` (get_all_pages) and `total` (fetch_total).
+    """
+
+    def install(responses):
+        pages = MagicMock(side_effect=_serve_pages(responses))
+        total = MagicMock(side_effect=_serve_total(responses))
+
+        for module in CACHE_SPOTIFY_MODULES:
+            monkeypatch.setattr(f"{module}.get_all_pages", pages)
+
+        monkeypatch.setattr("sgs.cache.library_cache.fetch_total", total)
+
+        calls = SimpleNamespace(pages=pages, total=total)
+
+        return calls
+
+    return install

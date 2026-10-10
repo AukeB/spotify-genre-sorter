@@ -6,7 +6,7 @@ import pytest
 import requests
 
 from sgs.constants import SPOTIFY_ME_URL
-from sgs.spotify_api import fetch_current_user, get_all_pages
+from sgs.spotify_api import fetch_current_user, fetch_total, get_all_pages
 
 
 # Testing the "fetch_current_user" function.
@@ -68,3 +68,31 @@ def test_get_all_pages_raises_on_error(mock_get):
 
     with pytest.raises(requests.HTTPError):
         list(get_all_pages("https://api.example/items", "token-123"))
+
+
+# Testing the "fetch_total" function.
+
+
+@patch("sgs.spotify_api.requests.get")
+def test_fetch_total_returns_total_from_single_item_request(mock_get):
+    """Only one item is requested, and the total field is returned."""
+    response = MagicMock()
+    response.json.return_value = {"total": 1234, "items": [{"id": "x"}]}
+    mock_get.return_value = response
+
+    total = fetch_total("https://api.example/items", "token-123")
+
+    assert total == 1234
+    assert mock_get.call_args.kwargs["params"] == {"limit": "1"}
+    assert mock_get.call_args.kwargs["headers"] == {"Authorization": "Bearer token-123"}
+
+
+@patch("sgs.spotify_api.requests.get")
+def test_fetch_total_raises_on_error(mock_get):
+    """A rejected request raises requests.HTTPError."""
+    response = MagicMock()
+    response.raise_for_status.side_effect = requests.HTTPError("401 Unauthorized")
+    mock_get.return_value = response
+
+    with pytest.raises(requests.HTTPError):
+        fetch_total("https://api.example/items", "bad-token")

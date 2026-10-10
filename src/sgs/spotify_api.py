@@ -35,6 +35,35 @@ def fetch_current_user(access_token: str) -> dict:
     return user
 
 
+def fetch_total(url: str, access_token: str) -> int:
+    """Returns how many items a paginated endpoint holds in total.
+
+    Requests a single item, which is enough to read the `total` field.
+
+    Args:
+        url (str): The endpoint URL, such as the saved tracks endpoint.
+        access_token (str): A valid Spotify access token.
+
+    Returns:
+        total (int): The total number of items on the account.
+
+    Raises:
+        requests.HTTPError: If Spotify rejects the request.
+    """
+    response = requests.get(
+        url,
+        headers={"Authorization": f"Bearer {access_token}"},
+        params={"limit": "1"},
+        timeout=10,
+    )
+
+    response.raise_for_status()
+    body = response.json()
+    total: int = body["total"]
+
+    return total
+
+
 def get_all_pages(
     url: str,
     access_token: str,

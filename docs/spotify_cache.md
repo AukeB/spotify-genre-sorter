@@ -2,7 +2,20 @@
 
 This document describes the SQLite database that caches the parts of your Spotify library the genre sorter needs. It explains the tables, how they connect, and why the cache exists.
 
-The code that creates and fills this database is in `src/sgs/spotify_cache.py`. The database file is `data/spotify_cache.db`.
+`src/sgs/spotify_cache.py` is the entry point, `SpotifyCache`. The work is split across modules in `src/sgs/cache/`:
+
+| Module | Responsibility |
+|---|---|
+| `schema.py` | Table definitions |
+| `playlist_cache.py` | Playlists and their songs |
+| `library_cache.py` | Liked songs and saved albums |
+| `top_track_cache.py` | Top tracks per time range |
+| `track_store.py` | Saving songs and artists, shared by all sources |
+| `source_links.py` | The `song_sources` rows, shared by all sources |
+| `song_reader.py` | Reading cached songs back out |
+| `sync_stats.py` | Counts and timing logged after each sync |
+
+The database file is `data/spotify_cache.db`.
 
 ## Why a cache
 
@@ -11,7 +24,11 @@ Spotify's API is slow when you ask for many songs. Your playlists hold thousands
 The cache avoids that repeat work in two ways:
 
 - **Playlists:** each playlist stores the `snapshot_id` Spotify returned the last time its songs were read. Spotify changes that value whenever the playlist changes. On the next run, a playlist is re-read only if its `snapshot_id` is different.
+- **Liked songs and saved albums:** each saved item stores its `added_at` date. The list is ordered newest first, so a run reads from the top and stops at the first item already cached. A saved album's tracks are fetched once, when the album is first seen.
+- **Top tracks:** the ranking is re-read only when the cached one is older than 24 hours (`TOP_TRACKS_MAX_AGE_HOURS`), because a ranking has no change marker.
 - **Artist genres:** each artist stores when its genres were fetched. An artist is requested only if it has never been fetched.
+
+Removals are detected by comparing the cached count with the `total` Spotify reports. If they differ, the whole list is read again.
 
 ## A subset of the Spotify data
 
@@ -49,6 +66,9 @@ erDiagram
     playlists ||--o{ playlist_songs : "contains"
     songs ||--o{ playlist_songs : "appears in"
     songs ||--o{ song_sources : "comes from"
+    library_items ||--o{ album_songs : "contains"
+    songs ||--o{ album_songs : "appears in"
+    songs ||--o{ top_track_rankings : "ranked in"
 
     songs {
         TEXT song_id PK
@@ -84,6 +104,22 @@ erDiagram
         TEXT playlist_id PK, FK
         INTEGER position PK
         TEXT song_id FK
+    }
+    library_items {
+        TEXT source_name PK
+        TEXT item_id PK
+        TIMESTAMP added_at
+    }
+    album_songs {
+        TEXT album_id PK, FK
+        INTEGER position PK
+        TEXT song_id FK
+    }
+    top_track_rankings {
+        TEXT time_range PK
+        INTEGER position PK
+        TEXT song_id FK
+        TIMESTAMP fetched_at
     }
     song_sources {
         TEXT song_id PK, FK
@@ -172,6 +208,37 @@ Records where each song was found. A song can come from several sources, and thi
 | `song_id` | TEXT | 🟦🟧 PK, FK | Refers to `songs.song_id` |
 | `source_name` | TEXT | 🟦 PK | One of `liked_songs`, `saved_albums`, `top_tracks`, `your_playlists` |
 
+### library_items
+
+One row per liked song or saved album. `item_id` is a track ID for `liked_songs` and an album ID for `saved_albums`. `added_at` is the date Spotify returns for the item, and it is how the cache tells whether an item is already known.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `source_name` | TEXT | 🟦 PK | `liked_songs` or `saved_albums` |
+| `item_id` | TEXT | 🟦 PK | Track ID for liked songs, album ID for saved albums |
+| `added_at` | TIMESTAMP | | When the item was added to the library |
+
+### album_songs
+
+Links a saved album to its tracks, in album order. Each album's tracks are fetched once and kept until the album is removed.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `album_id` | TEXT | 🟦🟧 PK, FK | Album ID, the same value as `library_items.item_id` for saved albums |
+| `position` | INTEGER | 🟦 PK | Position of the track on the album |
+| `song_id` | TEXT | 🟧 FK | Refers to `songs.song_id` |
+
+### top_track_rankings
+
+The top tracks for each time range, in ranking order. `fetched_at` decides whether the ranking is still fresh.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `time_range` | TEXT | 🟦 PK | `short_term`, `medium_term`, or `long_term` |
+| `position` | INTEGER | 🟦 PK | Rank of the track, `0` is the top track |
+| `song_id` | TEXT | 🟧 FK | Refers to `songs.song_id` |
+| `fetched_at` | TIMESTAMP | | When this ranking was read from Spotify |
+
 ## Join keys
 
 These are the columns used to combine tables:
@@ -183,6 +250,8 @@ These are the columns used to combine tables:
 | Playlists to songs | `playlist_songs.playlist_id` → `playlists.playlist_id` | Songs in a playlist |
 | Songs to sources | `song_sources.song_id` → `songs.song_id` | Where a song came from |
 | Genres to artists | `artist_genres.genre_name` → `genres.genre_name` | Artists in a genre |
+| Saved albums to songs | `album_songs.album_id` → `library_items.item_id` → `album_songs.song_id` | Tracks on a saved album |
+| Top tracks to songs | `top_track_rankings.song_id` → `songs.song_id` | Ranked top tracks |
 
 Following these joins from a song to its genres is the core query of the genre step:
 
@@ -194,12 +263,17 @@ songs → song_artists → artists → artist_genres → genres
 
 On each run, the app updates the cache in this order:
 
-1. Read `/me/playlists`. For each playlist, compare `snapshot_id` with the stored value.
-2. For each changed playlist, read its items and replace its rows in `playlist_songs`. Also add any new songs and artists to their tables, and update `synced_at`.
-3. Find artists with `genres_fetched_at IS NULL` and fetch their genres. Store the timestamp, even when the list is empty.
-4. Run the genre grouping as local queries, without further API calls.
+1. **Playlists.** Read `/me/playlists`. For each playlist, compare `snapshot_id` with the stored value. For each changed playlist, read its items and replace its rows in `playlist_songs`. Update `synced_at`.
+2. **Liked songs.** Read the total from `/me/tracks`, then read pages from the top until the first item already cached. Store the new items. If the cached count still differs from the total, read every item again to find removals.
+3. **Saved albums.** The same as liked songs, using `/me/albums`. Only new albums have their tracks fetched.
+4. **Top tracks.** Re-read the ranking for the configured time range only if it is older than 24 hours.
+5. **Song sources.** Rebuild the `song_sources` rows for each source, so that every cached song is linked to the sources it came from. Only rows that changed are written.
+6. **Genres (not built yet).** Find artists with `genres_fetched_at IS NULL` and fetch their genres. Store the timestamp, even when the list is empty.
+7. Run the genre grouping as local queries, without further API calls.
 
-Each playlist is written in one transaction, so an interrupted run never leaves a playlist half-updated.
+Each playlist and each album is written in one transaction, so an interrupted run never leaves one half-updated.
+
+The log shows how long each sync took, how many rows were added and changed, and how many items were already cached.
 
 ## Notes
 

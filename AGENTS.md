@@ -23,7 +23,7 @@ Python 3.12, managed with `uv`.
 - Class docstrings must have an `Attributes:` section. Classes that users call directly must also have an `Example:` section.
 - Order code bottom-up: define a function or method before the code that calls it. In a module, put helper functions above the functions that use them.
 - In a class, put `__init__`, `@classmethod`, and `@staticmethod` methods at the top, next to each other. Then put the other methods below them, with each helper defined above the method that calls it.
-- Prefix private functions, methods, and attributes with a single underscore. Leave them unprefixed only when they are part of the public API or are used by other modules.
+- Prefix private functions, methods, attributes, and variables with a single underscore. Leave them unprefixed only when they are part of the public API or are used by other modules.
 - Put custom exceptions in `src/sgs/errors.py`.
 - Put Spotify authentication code in `src/sgs/authentication/`. `SpotifyAuthenticator` stays in `authentication.py`; token models, helpers, and the callback server live in their own modules.
 - Keep tokens in memory only. Do not write them to disk or log them.
