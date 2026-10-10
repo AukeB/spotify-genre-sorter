@@ -21,6 +21,7 @@ def _response(status_code=200, payload=None, text=""):
     response.status_code = status_code
     response.text = text
     response.json.return_value = payload or {}
+
     return response
 
 

@@ -15,11 +15,13 @@ MODULE = "sgs.authentication.authentication"
 
 def _token(expires_in=3600, refresh_token="refresh-1"):
     """Builds a TokenInfo that expires after the given number of seconds."""
-    return TokenInfo(
+    token = TokenInfo(
         access_token="access-1",
         refresh_token=refresh_token,
         expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
     )
+
+    return token
 
 
 def _token_response(status_code=200, payload=None):
@@ -32,6 +34,7 @@ def _token_response(status_code=200, payload=None):
         "refresh_token": "refresh-2",
         "expires_in": 3600,
     }
+
     return response
 
 
@@ -40,13 +43,16 @@ def fixture_session():
     """A mocked requests session for the token endpoint."""
     session = MagicMock()
     session.post.return_value = _token_response()
+
     return session
 
 
 @pytest.fixture(name="authenticator")
 def fixture_authenticator(session):
     """An authenticator that uses the mocked session."""
-    return SpotifyAuthenticator(client_id="client-id", session=session)
+    authenticator = SpotifyAuthenticator(client_id="client-id", session=session)
+
+    return authenticator
 
 
 # Testing the "_build_authorize_url" method from the "SpotifyAuthenticator" class.

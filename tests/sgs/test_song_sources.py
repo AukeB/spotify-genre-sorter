@@ -14,25 +14,26 @@ PLAYLISTS_URL = f"{SPOTIFY_API_BASE_URL}/me/playlists"
 
 def _config(liked=False, albums=False, top=False, playlists=False, time_range="medium_term", collaborative=True):
     """Builds a ConfigModel with the given sources and options."""
-    return ConfigModel.model_validate(
-        {
-            "sources": {
-                "liked_songs": liked,
-                "saved_albums": albums,
-                "top_tracks": top,
-                "your_playlists": playlists,
-            },
-            "options": {
-                "top_tracks_time_range": time_range,
-                "include_collaborative_playlists": collaborative,
-            },
-        }
-    )
+    data = {
+        "sources": {
+            "liked_songs": liked,
+            "saved_albums": albums,
+            "top_tracks": top,
+            "your_playlists": playlists,
+        },
+        "options": {
+            "top_tracks_time_range": time_range,
+            "include_collaborative_playlists": collaborative,
+        },
+    }
+    config = ConfigModel.model_validate(data)
+
+    return config
 
 
 def _track(track_id):
     """Builds a Spotify track object."""
-    return {
+    track = {
         "id": track_id,
         "name": f"Song {track_id}",
         "uri": f"spotify:track:{track_id}",
@@ -40,12 +41,17 @@ def _track(track_id):
         "artists": [{"id": "artist-1"}],
     }
 
+    return track
+
 
 def _fake_get_all_pages(responses):
     """Returns a stand-in for get_all_pages that serves items keyed by URL."""
 
     def fake(url, access_token, params=None):
-        return list(responses.get(url, []))
+        items = responses.get(url, [])
+        copied = list(items)
+
+        return copied
 
     return fake
 
@@ -100,7 +106,7 @@ def test_top_tracks_passes_configured_time_range():
 
 def _playlist_responses():
     """Playlists owned by me, followed from someone else, and collaborative with someone else."""
-    return {
+    responses = {
         PLAYLISTS_URL: [
             {"id": "p1", "owner": {"id": "me"}, "collaborative": False},
             {"id": "p2", "owner": {"id": "other"}, "collaborative": False},
@@ -114,6 +120,8 @@ def _playlist_responses():
         ],
         f"{SPOTIFY_API_BASE_URL}/playlists/p3/items": [{"item": _track("t3")}],
     }
+
+    return responses
 
 
 def test_playlists_only_reads_owned_playlists_when_collaborative_disabled():

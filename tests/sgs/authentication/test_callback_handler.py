@@ -22,7 +22,10 @@ def _serve_one_request(path):
         status = error.code
     thread.join(timeout=5)
     server.server_close()
-    return server, status
+
+    result = server, status
+
+    return result
 
 
 # Testing the "do_GET" method from the "CallbackHandler" class.

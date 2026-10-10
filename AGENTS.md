@@ -14,7 +14,7 @@ Python 3.12, managed with `uv`.
 - Use absolute imports from the package root, e.g. `from sgs.constants import ...`.
 - Write docstrings in Google style with `Args:`, `Returns:`, and `Raises:` sections. In the `Returns:` section, name the returned variable and its type, like `Args:` entries (e.g. `token (TokenInfo): The new token.`).
 - Do not nest calls inside other calls or inside the arguments of a call, including comprehensions. Assign the inner result to a variable on its own line, then pass that variable on (e.g. `songs.extend(album_songs)` after `album_songs = _to_songs(...)`).
-- Do not return an expression directly. Assign it to a variable first, then return the variable (e.g. `token = parse_token_response(response)` then `return token`).
+- Do not return an expression directly. Assign it to a variable first, then return the variable (e.g. `token = parse_token_response(response)` then `return token`). A plain variable or attribute, such as `return self._token`, is fine.
 - Blank lines:
   - Always put a blank line before a `return` statement, unless it is the first line of a block.
   - Put a blank line after a statement that spans multiple lines, such as a function call with arguments on separate lines.

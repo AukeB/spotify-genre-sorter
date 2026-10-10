@@ -55,3 +55,6 @@ Desktop.ini
 bitmaps/.~lock*
 bitmaps/.~lock.*#
 **/readme.todo
+
+# Build output
+dist/

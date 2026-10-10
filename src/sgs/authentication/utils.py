@@ -22,14 +22,16 @@ def generate_pkce_pair() -> tuple[str, str]:
     """Creates a PKCE code verifier and its S256 code challenge.
 
     Returns:
-        code_verifier, code_challenge (tuple[str, str]): The code verifier and
-            the code challenge.
+        pkce_pair (tuple[str, str]): The code verifier and the code challenge.
     """
     code_verifier = secrets.token_urlsafe(64)
-    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
-    code_challenge = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    verifier_bytes = code_verifier.encode("ascii")
+    digest = hashlib.sha256(verifier_bytes).digest()
+    encoded_digest = base64.urlsafe_b64encode(digest)
+    code_challenge = encoded_digest.rstrip(b"=").decode("ascii")
+    pkce_pair = (code_verifier, code_challenge)
 
-    return code_verifier, code_challenge
+    return pkce_pair
 
 
 def generate_state() -> str:
