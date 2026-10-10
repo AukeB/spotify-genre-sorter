@@ -47,7 +47,13 @@ other too.
 Run the app with your client ID:
 
 ```bash
-uv run python main.py --client-id YOUR_CLIENT_ID
+uv run python main.py --spotify-client-id YOUR_CLIENT_ID
+
+To also fetch Last.fm tags, pass your Last.fm API key:
+
+```bash
+uv run python main.py --spotify-client-id YOUR_CLIENT_ID --lastfm-api-key YOUR_LASTFM_KEY
+```
 ```
 
 Your browser opens the Spotify login page. After you approve access, the browser

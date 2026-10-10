@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import patch, mock_open
 from pathlib import Path
 
-from sgs.config_manager import ConfigManager
+from sgs.config.config_manager import ConfigManager
 
 @pytest.fixture(scope="function", name="mock_yaml_content")
 def mock_yaml_config():
@@ -32,7 +32,7 @@ def test_load_conig_file(mock_yaml_content):
     """Test loading config using mocked open."""
     m_open = mock_open(read_data=mock_yaml_content)
 
-    with patch("sgs.config_manager.open", m_open):
+    with patch("sgs.config.config_manager.open", m_open):
         config_manager = ConfigManager(Path("mock_config_path.yaml"))
         config = config_manager.load_config_file()
 
@@ -98,3 +98,10 @@ def fixture_spotify_calls(monkeypatch):
         return calls
 
     return install
+
+
+@pytest.fixture(scope="function", autouse=True, name="no_rate_limit")
+def fixture_no_rate_limit(monkeypatch):
+    """Stops the rate limiter from sleeping, so tests of external APIs run fast."""
+    monkeypatch.setattr("sgs.utils.rate_limiter.time.sleep", lambda seconds: None)
+

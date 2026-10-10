@@ -31,7 +31,7 @@ Python 3.12, managed with `uv`.
 - Do not use `print()` anywhere in the codebase. Output goes through `logging`, and the codebase should keep a proper logging setup: each module gets `logger = logging.getLogger(__name__)`, and logging is configured once in the entry point (`main.py`), inside the `if __name__ == "__main__":` block.
 
 ## Configuration conventions
-- `config.yaml` is the source of truth for the layout. `config_model.py` mirrors it exactly.
+- `config.yaml` is the source of truth for the layout. `src/sgs/config/config_model.py` mirrors it exactly.
 - Each top-level YAML section is one Pydantic model, defined as an inner class of `ConfigModel`. Nested YAML sections become nested inner classes of their parent model, so the nesting in the code matches the nesting in the file.
 - Fields are declared in the same order as the keys in the YAML file. Put the inner classes first, then the fields, following the same order.
 - Every config model inherits from `ConfiguredBaseModel` so unknown keys fail at load time.

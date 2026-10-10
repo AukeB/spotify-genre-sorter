@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from sgs.config_model import ConfigModel
+from sgs.config.config_model import ConfigModel
 from sgs.constants import SPOTIFY_API_BASE_URL, SPOTIFY_ME_ALBUMS_URL, SPOTIFY_ME_PLAYLISTS_URL, SPOTIFY_ME_TOP_TRACKS_URL, SPOTIFY_ME_TRACKS_URL
 from sgs.song_sources import SongSources
 

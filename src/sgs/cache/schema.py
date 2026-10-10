@@ -11,8 +11,7 @@ CREATE TABLE IF NOT EXISTS songs (
 
 CREATE TABLE IF NOT EXISTS artists (
     artist_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    genres_fetched_at TIMESTAMP
+    name TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS genres (
@@ -68,6 +67,15 @@ CREATE TABLE IF NOT EXISTS top_track_rankings (
     song_id TEXT REFERENCES songs(song_id),
     fetched_at TIMESTAMP NOT NULL,
     PRIMARY KEY (time_range, position)
+);
+
+CREATE TABLE IF NOT EXISTS artist_genre_responses (
+    artist_id TEXT NOT NULL REFERENCES artists(artist_id),
+    source TEXT NOT NULL,
+    fetched_at TIMESTAMP NOT NULL,
+    status TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    PRIMARY KEY (artist_id, source)
 );
 
 CREATE TABLE IF NOT EXISTS song_sources (

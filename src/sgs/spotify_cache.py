@@ -7,6 +7,7 @@ across the modules in sgs.cache.
 import sqlite3
 from pathlib import Path
 
+from sgs.cache.genre_response_cache import GenreResponseCache
 from sgs.cache.library_cache import LikedSongsCache, SavedAlbumsCache
 from sgs.cache.playlist_cache import PlaylistCache
 from sgs.cache.schema import create_schema
@@ -83,6 +84,7 @@ class SpotifyCache:
         self._top_tracks = TopTrackCache(
             self._connection, self._stats, track_store, source_links
         )
+        self._genre_responses = GenreResponseCache(self._connection, self._stats)
 
     def sync_playlists(
         self, access_token: str, user_id: str, include_collaborative: bool
@@ -129,6 +131,18 @@ class SpotifyCache:
         start = self._stats.start_sync()
         self._top_tracks.sync(access_token, time_range)
         self._stats.finish_sync("Top tracks", start)
+
+    def sync_genre_responses(self, lastfm_api_key: str | None) -> None:
+        """Requests MusicBrainz and Last.fm for artists that have no response
+        yet.
+
+        Args:
+            lastfm_api_key (str | None): A Last.fm API key, or None to skip
+                Last.fm.
+        """
+        start = self._stats.start_sync()
+        self._genre_responses.sync(lastfm_api_key)
+        self._stats.finish_sync("Genre responses", start)
 
     def get_songs_for_source(self, source_name: str) -> list[Song]:
         """Reads the cached songs that were found in a source.

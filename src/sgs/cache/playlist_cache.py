@@ -6,14 +6,14 @@ from collections.abc import Iterable
 
 from sgs.cache.source_links import SourceLinks
 from sgs.cache.sync_stats import SyncStats
-from sgs.cache.time_utils import utc_now
+from sgs.utils.time_utils import utc_now
 from sgs.cache.track_store import TrackStore
 from sgs.constants import (
     PLAYLIST_SOURCE_NAME,
     SPOTIFY_API_BASE_URL,
     SPOTIFY_ME_PLAYLISTS_URL,
 )
-from sgs.spotify_api import get_all_pages, is_readable_playlist
+from sgs.api.spotify_api import get_all_pages, is_readable_playlist
 
 logger = logging.getLogger(__name__)
 

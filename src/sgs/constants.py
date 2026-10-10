@@ -44,3 +44,14 @@ PLAYLIST_SOURCE_NAME = "your_playlists"
 LIKED_SOURCE_NAME = "liked_songs"
 SAVED_ALBUMS_SOURCE_NAME = "saved_albums"
 TOP_TRACKS_SOURCE_NAME = "top_tracks"
+
+
+# --- Related to genre sources outside Spotify ---
+
+
+MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2"
+MUSICBRAINZ_USER_AGENT = "SpotifyGenreSorter/0.1 (personal project)"
+MUSICBRAINZ_MIN_INTERVAL_SECONDS = 1.0
+
+LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/"
+LASTFM_MIN_INTERVAL_SECONDS = 0.25

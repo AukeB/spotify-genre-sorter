@@ -21,7 +21,7 @@ from sgs.constants import (
     SPOTIFY_ME_ALBUMS_URL,
     SPOTIFY_ME_TRACKS_URL,
 )
-from sgs.spotify_api import fetch_total, get_all_pages
+from sgs.api.spotify_api import fetch_total, get_all_pages
 
 logger = logging.getLogger(__name__)
 

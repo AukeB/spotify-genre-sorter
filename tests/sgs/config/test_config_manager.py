@@ -1,4 +1,4 @@
-"""Module for testing config_manager.py"""
+"""Module for testing config/config_manager.py"""
 
 
 from pathlib import Path
@@ -7,7 +7,7 @@ from unittest.mock import mock_open, patch
 import pytest
 from pydantic import ValidationError
 
-from sgs.config_manager import ConfigManager, ConfigModel
+from sgs.config.config_manager import ConfigManager, ConfigModel
 
 
 # Testing the "load_config_file" method from the "ConfigManager" class.
@@ -31,5 +31,5 @@ def test_load_config_file_rejects_unknown_time_range(mock_yaml_content):
     """A time range outside the allowed values fails validation."""
     m_open = mock_open(read_data=mock_yaml_content.replace("long_term", "forever"))
 
-    with patch("sgs.config_manager.open", m_open), pytest.raises(ValidationError):
+    with patch("sgs.config.config_manager.open", m_open), pytest.raises(ValidationError):
         ConfigManager(Path("mock_config_path.yaml")).load_config_file()

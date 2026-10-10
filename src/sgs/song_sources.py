@@ -3,7 +3,7 @@
 import logging
 import time
 
-from sgs.config_model import ConfigModel
+from sgs.config.config_model import ConfigModel
 from sgs.constants import (
     LIKED_SOURCE_NAME,
     PLAYLIST_SOURCE_NAME,
@@ -11,7 +11,7 @@ from sgs.constants import (
     TOP_TRACKS_SOURCE_NAME,
 )
 from sgs.models import Song
-from sgs.spotify_api import fetch_current_user
+from sgs.api.spotify_api import fetch_current_user
 from sgs.spotify_cache import SpotifyCache
 
 logger = logging.getLogger(__name__)

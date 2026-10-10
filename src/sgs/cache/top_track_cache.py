@@ -5,7 +5,7 @@ import sqlite3
 
 from sgs.cache.source_links import SourceLinks
 from sgs.cache.sync_stats import SyncStats
-from sgs.cache.time_utils import utc_cutoff, utc_now
+from sgs.utils.time_utils import utc_cutoff, utc_now
 from sgs.cache.track_filters import usable_tracks
 from sgs.cache.track_store import TrackStore
 from sgs.constants import (
@@ -13,7 +13,7 @@ from sgs.constants import (
     TOP_TRACKS_MAX_AGE_HOURS,
     TOP_TRACKS_SOURCE_NAME,
 )
-from sgs.spotify_api import get_all_pages
+from sgs.api.spotify_api import get_all_pages
 
 logger = logging.getLogger(__name__)
 

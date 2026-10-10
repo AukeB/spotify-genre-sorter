@@ -26,7 +26,7 @@ The cache avoids that repeat work in two ways:
 - **Playlists:** each playlist stores the `snapshot_id` Spotify returned the last time its songs were read. Spotify changes that value whenever the playlist changes. On the next run, a playlist is re-read only if its `snapshot_id` is different.
 - **Liked songs and saved albums:** each saved item stores its `added_at` date. The list is ordered newest first, so a run reads from the top and stops at the first item already cached. A saved album's tracks are fetched once, when the album is first seen.
 - **Top tracks:** the ranking is re-read only when the cached one is older than 24 hours (`TOP_TRACKS_MAX_AGE_HOURS`), because a ranking has no change marker.
-- **Artist genres:** the genre tables are in place, but Spotify no longer returns genres to apps in Development mode, so nothing fills them yet. The source for genre data is still to be decided.
+- **Genre responses:** each artist keeps the raw JSON returned by MusicBrainz and by Last.fm, one row per source. A source is asked again only for artists it has not answered yet.
 
 Removals are detected by comparing the cached count with the `total` Spotify reports. If they differ, the whole list is read again.
 
@@ -62,6 +62,7 @@ erDiagram
     songs ||--o{ song_artists : "has"
     artists ||--o{ song_artists : "performs"
     artists ||--o{ artist_genres : "has"
+    artists ||--o{ artist_genre_responses : "has raw response from"
     genres ||--o{ artist_genres : "describes"
     playlists ||--o{ playlist_songs : "contains"
     songs ||--o{ playlist_songs : "appears in"
@@ -78,7 +79,13 @@ erDiagram
     artists {
         TEXT artist_id PK
         TEXT name
-        TIMESTAMP genres_fetched_at
+    }
+    artist_genre_responses {
+        TEXT artist_id PK, FK
+        TEXT source PK
+        TIMESTAMP fetched_at
+        TEXT status
+        TEXT payload
     }
     genres {
         TEXT genre_name PK
@@ -147,7 +154,6 @@ One row per Spotify artist. Genres are attached to artists, not to songs.
 |---|---|---|---|
 | `artist_id` | TEXT | 🟦 PK | Spotify artist ID |
 | `name` | TEXT | | Artist name |
-| `genres_fetched_at` | TIMESTAMP | | When the genres were last fetched. `NULL` means never fetched. An empty genre list is a valid, cached answer. |
 
 ### genres
 
@@ -268,7 +274,7 @@ On each run, the app updates the cache in this order:
 3. **Saved albums.** The same as liked songs, using `/me/albums`. Only new albums have their tracks fetched.
 4. **Top tracks.** Re-read the ranking for the configured time range only if it is older than 24 hours.
 5. **Song sources.** Rebuild the `song_sources` rows for each source, so that every cached song is linked to the sources it came from. Only rows that changed are written.
-6. **Genres (not built yet).** Genre data will come from a source to be decided. The tables and `genres_fetched_at` stay in place for it.
+6. **Genre responses.** Request MusicBrainz, and Last.fm if an API key is set, for each artist that has no response from that source yet. Store the raw JSON. Parsing it into `genres` and `artist_genres` comes later.
 7. Run the genre grouping as local queries, without further API calls.
 
 Each playlist and each album is written in one transaction, so an interrupted run never leaves one half-updated.

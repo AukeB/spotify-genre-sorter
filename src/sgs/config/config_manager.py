@@ -5,7 +5,7 @@ import yaml
 from pathlib import Path
 
 from sgs.constants import CONFIG_PATH
-from sgs.config_model import ConfigModel
+from sgs.config.config_model import ConfigModel
 
 
 class ConfigManager:
