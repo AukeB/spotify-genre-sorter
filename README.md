@@ -157,14 +157,6 @@ make ruff            # format and lint
 The folder [src/sgs/cache/](src/sgs/cache/README.md) describes the cache modules, and
 [docs/spotify_cache.md](docs/spotify_cache.md) describes the database tables.
 
-[scripts/explore_genre_sources.py](scripts/explore_genre_sources.py) takes a few
-random artists from the cache and prints what MusicBrainz and Last.fm return for
-them. It does not write to the cache. Use it to inspect the responses:
-
-```bash
-uv run python scripts/explore_genre_sources.py --limit 5 --lastfm-api-key YOUR_LASTFM_KEY
-```
-
 See [AGENTS.md](AGENTS.md) for the code conventions used in this project.
 
 ## Troubleshooting
