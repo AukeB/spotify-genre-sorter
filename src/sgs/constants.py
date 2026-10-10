@@ -50,8 +50,24 @@ TOP_TRACKS_SOURCE_NAME = "top_tracks"
 
 
 MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2"
-MUSICBRAINZ_USER_AGENT = "SpotifyGenreSorter/0.1 (personal project)"
+APP_USER_AGENT = "SpotifyGenreSorter/0.1 (personal project)"
 MUSICBRAINZ_MIN_INTERVAL_SECONDS = 1.0
 
 LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/"
-LASTFM_MIN_INTERVAL_SECONDS = 0.25
+LASTFM_MIN_INTERVAL_SECONDS = 1.0
+
+
+# --- Retrying after a rate limit ---
+
+
+# How many times a request is tried in total before the run stops.
+RATE_LIMIT_MAX_ATTEMPTS = 5
+# The first wait after a rate limit, in seconds. Each further wait is multiplied by the backoff.
+RATE_LIMIT_BASE_DELAY_SECONDS = 2.0
+RATE_LIMIT_BACKOFF = 2.0
+# The longest wait allowed. A longer wait stops the run instead.
+RATE_LIMIT_MAX_DELAY_SECONDS = 300.0
+
+# HTTP status codes that are retried after a wait.
+# 429 means too many requests, 503 means the service is temporarily unavailable.
+RETRYABLE_ERROR_CODES = {429, 503}

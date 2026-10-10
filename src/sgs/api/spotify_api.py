@@ -3,13 +3,13 @@
 import logging
 from collections.abc import Iterator
 
-import requests
-
+from sgs.api.http import get, retry_api_error
 from sgs.constants import SPOTIFY_ME_URL
 
 logger = logging.getLogger(__name__)
 
 
+@retry_api_error
 def fetch_current_user(access_token: str) -> dict:
     """Fetches the profile of the logged-in Spotify user.
 
@@ -23,10 +23,9 @@ def fetch_current_user(access_token: str) -> dict:
         requests.HTTPError: If Spotify rejects the request, for example with an
             expired or invalid token.
     """
-    response = requests.get(
+    response = get(
         SPOTIFY_ME_URL,
         headers={"Authorization": f"Bearer {access_token}"},
-        timeout=10,
     )
 
     response.raise_for_status()
@@ -35,6 +34,7 @@ def fetch_current_user(access_token: str) -> dict:
     return user
 
 
+@retry_api_error
 def fetch_total(url: str, access_token: str) -> int:
     """Returns how many items a paginated endpoint holds in total.
 
@@ -50,11 +50,10 @@ def fetch_total(url: str, access_token: str) -> int:
     Raises:
         requests.HTTPError: If Spotify rejects the request.
     """
-    response = requests.get(
+    response = get(
         url,
         headers={"Authorization": f"Bearer {access_token}"},
         params={"limit": "1"},
-        timeout=10,
     )
 
     response.raise_for_status()
@@ -62,6 +61,33 @@ def fetch_total(url: str, access_token: str) -> int:
     total: int = body["total"]
 
     return total
+
+
+@retry_api_error
+def _fetch_page(url: str, access_token: str, params: dict[str, str] | None) -> dict:
+    """Fetches one page of a paginated Spotify endpoint.
+
+    Args:
+        url (str): The page URL.
+        access_token (str): A valid Spotify access token.
+        params (dict[str, str] | None): Query parameters for this page.
+
+    Returns:
+        page (dict): The page body from Spotify.
+
+    Raises:
+        requests.HTTPError: If Spotify rejects the request.
+    """
+    response = get(
+        url,
+        headers={"Authorization": f"Bearer {access_token}"},
+        params=params,
+    )
+
+    response.raise_for_status()
+    page = response.json()
+
+    return page
 
 
 def get_all_pages(
@@ -92,15 +118,7 @@ def get_all_pages(
     next_params = params
 
     while next_url is not None:
-        response = requests.get(
-            next_url,
-            headers={"Authorization": f"Bearer {access_token}"},
-            params=next_params,
-            timeout=10,
-        )
-
-        response.raise_for_status()
-        page = response.json()
+        page = _fetch_page(next_url, access_token, next_params)
         items = page["items"]
 
         source = description or next_url

@@ -46,7 +46,7 @@ def test_find_linked_artist_id_returns_none_without_relation():
 # Testing the "fetch_musicbrainz_artist" function.
 
 
-@patch("sgs.api.musicbrainz_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_musicbrainz_artist_returns_found_with_raw_payload(mock_get):
     """A matched artist returns both raw responses in the payload."""
     artist_body = {"id": "mb-1", "genres": [{"name": "jazz"}], "tags": []}
@@ -60,7 +60,7 @@ def test_fetch_musicbrainz_artist_returns_found_with_raw_payload(mock_get):
     assert mock_get.call_args_list[1].args[0].endswith("/artist/mb-1")
 
 
-@patch("sgs.api.musicbrainz_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_musicbrainz_artist_returns_not_matched_on_404(mock_get):
     """An artist without a MusicBrainz link is reported as not matched, not as an error."""
     mock_get.return_value = _response(404)
@@ -72,7 +72,7 @@ def test_fetch_musicbrainz_artist_returns_not_matched_on_404(mock_get):
     assert mock_get.call_count == 1
 
 
-@patch("sgs.api.musicbrainz_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_musicbrainz_artist_returns_not_matched_without_relation(mock_get):
     """A lookup that comes back without a linked artist is reported as not matched."""
     lookup = {"relations": []}
@@ -85,7 +85,7 @@ def test_fetch_musicbrainz_artist_returns_not_matched_without_relation(mock_get)
     assert mock_get.call_count == 1
 
 
-@patch("sgs.api.musicbrainz_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_musicbrainz_artist_raises_on_server_error(mock_get):
     """A server error on the URL lookup is raised, so the run can be retried later."""
     mock_get.return_value = _response(500)
@@ -94,7 +94,7 @@ def test_fetch_musicbrainz_artist_raises_on_server_error(mock_get):
         fetch_musicbrainz_artist("spotify-1")
 
 
-@patch("sgs.api.musicbrainz_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_musicbrainz_artist_raises_on_artist_request_error(mock_get):
     """A server error on the artist request is raised."""
     mock_get.side_effect = [_response(200, _url_lookup("mb-1")), _response(500)]

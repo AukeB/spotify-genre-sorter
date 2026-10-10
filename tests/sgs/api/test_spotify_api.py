@@ -12,7 +12,7 @@ from sgs.api.spotify_api import fetch_current_user, fetch_total, get_all_pages
 # Testing the "fetch_current_user" function.
 
 
-@patch("sgs.api.spotify_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_current_user_returns_profile(mock_get):
     """The profile from the current-user endpoint is returned."""
     response = MagicMock()
@@ -27,7 +27,7 @@ def test_fetch_current_user_returns_profile(mock_get):
     assert mock_get.call_args.kwargs["headers"] == {"Authorization": "Bearer token-123"}
 
 
-@patch("sgs.api.spotify_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_current_user_raises_on_rejected_token(mock_get):
     """A rejected token raises requests.HTTPError."""
     response = MagicMock()
@@ -41,7 +41,7 @@ def test_fetch_current_user_raises_on_rejected_token(mock_get):
 # Testing the "get_all_pages" function.
 
 
-@patch("sgs.api.spotify_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_get_all_pages_follows_next_links(mock_get):
     """Items from every page are yielded, following the next link until it is null."""
     first_page = MagicMock()
@@ -59,7 +59,7 @@ def test_get_all_pages_follows_next_links(mock_get):
     assert mock_get.call_args_list[1].kwargs["params"] is None
 
 
-@patch("sgs.api.spotify_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_get_all_pages_raises_on_error(mock_get):
     """A failed page request raises requests.HTTPError."""
     response = MagicMock()
@@ -73,7 +73,7 @@ def test_get_all_pages_raises_on_error(mock_get):
 # Testing the "fetch_total" function.
 
 
-@patch("sgs.api.spotify_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_total_returns_total_from_single_item_request(mock_get):
     """Only one item is requested, and the total field is returned."""
     response = MagicMock()
@@ -87,7 +87,7 @@ def test_fetch_total_returns_total_from_single_item_request(mock_get):
     assert mock_get.call_args.kwargs["headers"] == {"Authorization": "Bearer token-123"}
 
 
-@patch("sgs.api.spotify_api.requests.get")
+@patch("sgs.api.http.requests.get")
 def test_fetch_total_raises_on_error(mock_get):
     """A rejected request raises requests.HTTPError."""
     response = MagicMock()
@@ -96,3 +96,22 @@ def test_fetch_total_raises_on_error(mock_get):
 
     with pytest.raises(requests.HTTPError):
         fetch_total("https://api.example/items", "bad-token")
+
+
+@patch("sgs.api.http.requests.get")
+def test_get_all_pages_retries_after_rate_limit(mock_get):
+    """A page that hits a rate limit is requested again, and the items still come through."""
+    limited = MagicMock()
+    limited.status_code = 429
+    limited.headers = {"Retry-After": "1"}
+    page = MagicMock()
+    page.status_code = 200
+    page.json.return_value = {"items": [1], "next": None}
+    mock_get.side_effect = [limited, page]
+
+    with patch("sgs.utils.retry.time.sleep"):
+        items = list(get_all_pages("https://api.example/items", "token-123"))
+
+    assert items == [1]
+    assert mock_get.call_count == 2
+

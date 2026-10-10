@@ -56,6 +56,7 @@ class GenreResponseCache:
             "ORDER BY artist_id",
             (source,),
         ).fetchall()
+
         artists = [(row[0], row[1]) for row in rows]
 
         return artists
@@ -86,13 +87,22 @@ class GenreResponseCache:
         """
         pending = self._pending_artists(MUSICBRAINZ_SOURCE)
         matched = 0
+        logger.info("MusicBrainz: requesting %d artists", len(pending))
 
-        for artist_id, _name in pending:
+        for index, (artist_id, name) in enumerate(pending, start=1):
             result = fetch_musicbrainz_artist(artist_id)
             self._store(artist_id, MUSICBRAINZ_SOURCE, result)
 
             if result["status"] == "found":
                 matched += 1
+
+            logger.info(
+                "MusicBrainz %d/%d: %s -> %s",
+                index,
+                len(pending),
+                name,
+                result["status"],
+            )
 
         logger.info(
             "MusicBrainz: %d artists requested, %d matched", len(pending), matched
@@ -105,10 +115,15 @@ class GenreResponseCache:
             api_key (str): A Last.fm API key.
         """
         pending = self._pending_artists(LASTFM_SOURCE)
+        logger.info("Last.fm: requesting %d artists", len(pending))
 
-        for artist_id, name in pending:
+        for index, (artist_id, name) in enumerate(pending, start=1):
             result = fetch_lastfm_top_tags(name, api_key)
             self._store(artist_id, LASTFM_SOURCE, result)
+
+            logger.info(
+                "Last.fm %d/%d: %s -> %s", index, len(pending), name, result["status"]
+            )
 
         logger.info("Last.fm: %d artists requested", len(pending))
 

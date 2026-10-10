@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from sgs.errors import LastfmInvalidKeyError
 from sgs.spotify_cache import SpotifyCache
 
 
@@ -117,3 +118,23 @@ def test_sync_keeps_responses_stored_before_an_error(cache_path, monkeypatch):
         rows = _stored(cache)
 
     assert [row[0] for row in rows] == ["a1"]
+
+
+def test_sync_aborts_on_invalid_lastfm_key_without_storing_errors(cache_path, monkeypatch):
+    """A rejected Last.fm key stops the run and stores nothing for Last.fm."""
+
+    def rejected(name, api_key):
+        raise LastfmInvalidKeyError("Last.fm rejected the API key")
+
+    _stub_sources(monkeypatch, musicbrainz=_found, lastfm=rejected)
+
+    with SpotifyCache() as cache:
+        _add_artists(cache, [("a1", "Lambert"), ("a2", "Two")])
+
+        with pytest.raises(LastfmInvalidKeyError):
+            cache.sync_genre_responses("wrong-key")
+
+        rows = _stored(cache)
+
+    assert [row[1] for row in rows] == ["musicbrainz", "musicbrainz"]
+
