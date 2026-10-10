@@ -63,6 +63,49 @@ The app requests these scopes:
 - `playlist-read-private`
 - `playlist-read-collaborative`
 - `user-library-read`
+- `user-top-read`
+
+## Configuration
+
+Settings live in [src/sgs/configs/config.yaml](src/sgs/configs/config.yaml).
+The file is validated when it is loaded. An unknown key or an invalid value
+raises a validation error.
+
+### `sources`
+
+Choose where songs are read from. Each option is a boolean.
+
+| Option | Default | Scope | Description |
+|---|---|---|---|
+| `liked_songs` | `true` | `user-library-read` | Songs you have liked. |
+| `saved_albums` | `false` | `user-library-read` | All tracks from albums you have saved. |
+| `top_tracks` | `false` | `user-top-read` | Your most-played tracks. |
+| `your_playlists` | `false` | `playlist-read-private`, `playlist-read-collaborative` | Tracks from playlists you own, and from collaborative playlists when `include_collaborative_playlists` is enabled. |
+
+### `options`
+
+Settings that change how the sources are read.
+
+| Option | Default | Allowed values | Description |
+|---|---|---|---|
+| `top_tracks_time_range` | `medium_term` | `short_term` (about 4 weeks), `medium_term` (about 6 months), `long_term` (about 1 year) | Period used for top tracks. |
+| `include_collaborative_playlists` | `true` | `true`, `false` | Also read playlists you collaborate on. Spotify does not let the app read playlists you only follow. |
+
+The `top_tracks_time_range` periods are approximate. Spotify describes them the same way in its [Get User's Top Artists and Tracks](https://developer.spotify.com/documentation/web-api/reference/get-users-top-artists-and-tracks) reference.
+
+Example:
+
+```yaml
+sources:
+  liked_songs: true
+  saved_albums: false
+  top_tracks: false
+  your_playlists: false
+
+options:
+  top_tracks_time_range: medium_term
+  include_collaborative_playlists: true
+```
 
 ## Development
 

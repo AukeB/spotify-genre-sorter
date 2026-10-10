@@ -11,17 +11,14 @@ from sgs.config_manager import ConfigManager
 def mock_yaml_config():
     """Fixture that defines a mock config content"""
     yaml_content = """
-        config_category_1:
-            float_param: 1.5
-            str_param: 'hello'
-
-        config_category_two:
-            int_param: 1
-            bool_param: true
-            list_param:
-                - 'item1'
-                - 'item2'
-                - 'item3'
+        sources:
+            liked_songs: true
+            saved_albums: false
+            top_tracks: false
+            your_playlists: true
+        options:
+            top_tracks_time_range: long_term
+            include_collaborative_playlists: false
     """
 
     return yaml_content

@@ -34,7 +34,7 @@ class ConfigManager:
         3. Validates and structures the parsed data into a ConfigModel.
 
         Returns:
-            config (ConfigModel): The validated configuration object.
+            config_model (ConfigModel): The validated configuration object.
         """
         with open(self.config_path) as file:
             config = yaml.safe_load(file)

@@ -5,7 +5,11 @@ import logging
 import typer
 
 from sgs.authentication import SpotifyAuthenticator
+from sgs.config_manager import ConfigManager
+from sgs.song_sources import SongSources
 from sgs.spotify_api import fetch_current_user
+
+logger = logging.getLogger(__name__)
 
 app = typer.Typer(help="Log in to Spotify and show the user.")
 
@@ -21,14 +25,17 @@ def main(
     2. Run the PKCE login in the browser and keep the token in memory.
     3. Call the current-user endpoint to confirm the token works.
     """
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
-
     authenticator = SpotifyAuthenticator(client_id=client_id)
     access_token = authenticator.get_valid_token()
     user = fetch_current_user(access_token)
     
-    print(f"Logged in as: {user['display_name']}")
+    logger.info("Logged in as: %s", user["display_name"])
+
+    config = ConfigManager().load_config_file()
+    songs = SongSources(config, access_token).get_all_songs()
+    logger.info("Found %d unique songs", len(songs))
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     app()

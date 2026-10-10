@@ -1,5 +1,7 @@
 """Module for Pydantic configuration models."""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 
@@ -12,18 +14,19 @@ class ConfiguredBaseModel(BaseModel):
 class ConfigModel(ConfiguredBaseModel):
     """Config that combines all parameters"""
 
-    class ConfigCategory1(ConfiguredBaseModel):
-        """Config for category 1 parameters"""
+    class Sources(ConfiguredBaseModel):
+        """Which song sources to read from"""
 
-        float_param: float
-        str_param: str
+        liked_songs: bool
+        saved_albums: bool
+        top_tracks: bool
+        your_playlists: bool
 
-    class ConfigCategory2(ConfiguredBaseModel):
-        """Config for category 2 parameters"""
+    class Options(ConfiguredBaseModel):
+        """Settings that change how the sources are read"""
 
-        int_param: int
-        bool_param: bool
-        list_param: list[str]
+        top_tracks_time_range: Literal["short_term", "medium_term", "long_term"]
+        include_collaborative_playlists: bool
 
-    config_category_1: ConfigCategory1
-    config_category_two: ConfigCategory2
+    sources: Sources
+    options: Options

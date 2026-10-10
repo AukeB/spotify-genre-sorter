@@ -22,7 +22,8 @@ def generate_pkce_pair() -> tuple[str, str]:
     """Creates a PKCE code verifier and its S256 code challenge.
 
     Returns:
-        tuple[str, str]: The code verifier and the code challenge.
+        code_verifier, code_challenge (tuple[str, str]): The code verifier and
+            the code challenge.
     """
     code_verifier = secrets.token_urlsafe(64)
     digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
