@@ -12,6 +12,7 @@ from sgs.authentication.utils import (
     generate_state,
     parse_token_response,
 )
+
 from sgs.errors import SpotifyAuthError
 
 

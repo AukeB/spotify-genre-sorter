@@ -11,6 +11,7 @@ from sgs.constants import (
     LASTFM_MIN_INTERVAL_SECONDS,
     APP_USER_AGENT,
 )
+
 from sgs.utils.rate_limiter import RateLimiter
 
 _limiter = RateLimiter(LASTFM_MIN_INTERVAL_SECONDS)

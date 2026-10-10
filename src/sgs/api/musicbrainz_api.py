@@ -12,6 +12,7 @@ from sgs.constants import (
     MUSICBRAINZ_URL,
     APP_USER_AGENT,
 )
+
 from sgs.utils.rate_limiter import RateLimiter
 
 _limiter = RateLimiter(MUSICBRAINZ_MIN_INTERVAL_SECONDS)

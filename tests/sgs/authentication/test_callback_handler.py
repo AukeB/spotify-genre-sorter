@@ -20,6 +20,7 @@ def _serve_one_request(path):
             status = response.status
     except urllib.error.HTTPError as error:
         status = error.code
+
     thread.join(timeout=5)
     server.server_close()
 

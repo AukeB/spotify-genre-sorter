@@ -10,6 +10,7 @@ from sgs.constants import (
     SAVED_ALBUMS_SOURCE_NAME,
     TOP_TRACKS_SOURCE_NAME,
 )
+
 from sgs.models import Song
 from sgs.api.spotify_api import fetch_current_user
 from sgs.spotify_cache import SpotifyCache

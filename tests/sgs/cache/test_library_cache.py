@@ -15,6 +15,7 @@ from sgs.constants import (
     SPOTIFY_ME_ALBUMS_URL,
     SPOTIFY_ME_TRACKS_URL,
 )
+
 from sgs.spotify_cache import SpotifyCache
 
 
@@ -122,6 +123,7 @@ def test_liked_songs_skips_null_tracks(cache_path, spotify_calls):
             _saved("t1", "2026-01-01"),
         ]
     }
+
     spotify_calls(responses)
 
     songs = _sync_liked()
@@ -138,6 +140,7 @@ def test_saved_albums_fetches_album_tracks_only_once(cache_path, spotify_calls):
         SPOTIFY_ME_ALBUMS_URL: [_saved_album("a1", "2026-01-01")],
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1"), _track("t2")],
     }
+
     calls = spotify_calls(responses)
 
     _sync_albums()
@@ -155,6 +158,7 @@ def test_saved_albums_removes_album_songs_when_album_is_removed(cache_path, spot
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1")],
         f"{SPOTIFY_API_BASE_URL}/albums/a2/tracks": [_track("t2")],
     }
+
     spotify_calls(responses)
     _sync_albums()
 
@@ -170,6 +174,7 @@ def test_saved_albums_full_read_stores_albums_after_a_known_one(cache_path, spot
         SPOTIFY_ME_ALBUMS_URL: [_saved_album("a1", "2026-01-01")],
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1")],
     }
+
     spotify_calls(responses)
     _sync_albums()
 

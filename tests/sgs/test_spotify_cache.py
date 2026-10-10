@@ -43,9 +43,11 @@ def test_get_songs_for_source_returns_only_requested_source(cache_path):
         cache._connection.execute(
             "INSERT INTO songs (song_id, name, uri) VALUES ('t1', 'Song', 'uri')"
         )
+
         cache._connection.execute(
             "INSERT INTO song_sources (song_id, source_name) VALUES ('t1', 'liked_songs')"
         )
+
         songs = cache.get_songs_for_source(PLAYLIST_SOURCE_NAME)
 
     assert songs == []

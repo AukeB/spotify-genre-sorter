@@ -122,6 +122,7 @@ def retry(
                         error,
                         delay,
                     )
+
                     time.sleep(delay)
                     attempt += 1
                 else:

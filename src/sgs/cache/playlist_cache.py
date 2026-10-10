@@ -13,6 +13,7 @@ from sgs.constants import (
     SPOTIFY_API_BASE_URL,
     SPOTIFY_ME_PLAYLISTS_URL,
 )
+
 from sgs.api.spotify_api import get_all_pages, is_readable_playlist
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,7 @@ class PlaylistCache:
             "SELECT snapshot_id FROM playlists WHERE playlist_id = ?",
             (playlist_id,),
         ).fetchone()
+
         snapshot_id = row[0] if row else None
 
         return snapshot_id
@@ -112,6 +114,7 @@ class PlaylistCache:
             "SELECT COUNT(*) FROM playlist_songs WHERE playlist_id = ?",
             (playlist_id,),
         ).fetchone()
+
         count = row[0]
 
         return count
@@ -181,6 +184,7 @@ class PlaylistCache:
                 playlist["name"],
                 cached_count,
             )
+
             return
 
         items_url = f"{SPOTIFY_API_BASE_URL}/playlists/{playlist['id']}/items"

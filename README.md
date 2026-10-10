@@ -58,13 +58,13 @@ is not needed.
 Run the app with your Spotify client ID:
 
 ```bash
-uv run python main.py --spotify-client-id YOUR_CLIENT_ID
+uv run python main.py run --spotify-client-id YOUR_CLIENT_ID
 ```
 
 To also fetch Last.fm tags, add your Last.fm API key:
 
 ```bash
-uv run python main.py --spotify-client-id YOUR_CLIENT_ID --lastfm-api-key YOUR_LASTFM_KEY
+uv run python main.py run --spotify-client-id YOUR_CLIENT_ID --lastfm-api-key YOUR_LASTFM_KEY
 ```
 
 Your browser opens the Spotify login page. After you approve access, the browser
@@ -79,6 +79,17 @@ A run does these steps in order:
 
 The login only runs when the app starts. Tokens are kept in memory and are not
 saved to disk, so you log in again each time you run the app.
+
+### Inspecting one track
+
+To see everything the cache stores about one track, use the `track` command. It reads the database only and doesn't call Spotify:
+
+```bash
+uv run python main.py track --track-id 4F2QVxqYaLlsZQx70Wngct
+uv run python main.py track --track-link https://open.spotify.com/track/4F2QVxqYaLlsZQx70Wngct
+```
+
+Give either `--track-id` or `--track-link`, not both. Every field from the database is shown, and empty fields say so. The raw JSON is summarised by default. Add `--raw` to print it in full.
 
 ### Runtime and reruns
 

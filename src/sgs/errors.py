@@ -36,6 +36,7 @@ class RetryableApiError(Exception):
             message = (
                 f"The API returned HTTP {status_code}, so the request will be retried"
             )
+
         super().__init__(message)
         self.retry_after = retry_after
         self.status_code = status_code

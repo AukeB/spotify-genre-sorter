@@ -1,7 +1,8 @@
-"""Saves tracks, their artists, and the links between them."""
+"""Saves tracks, their artists, albums, and the links between them."""
 
 import sqlite3
 
+from sgs.cache.raw_store import RawStore
 from sgs.cache.sync_stats import SyncStats
 
 
@@ -14,6 +15,7 @@ class TrackStore:
     Attributes:
         _connection (sqlite3.Connection): Open connection to the cache file.
         _stats (SyncStats): Receives the counts of rows added and changed.
+        _raw (RawStore): Keeps the raw JSON of every object.
     """
 
     def __init__(self, connection: sqlite3.Connection, stats: SyncStats) -> None:
@@ -25,6 +27,7 @@ class TrackStore:
         """
         self._connection = connection
         self._stats = stats
+        self._raw = RawStore(connection)
 
     def _store_artist(self, song_id: str, artist: dict, position: int) -> None:
         """Saves one artist and links it to a song.
@@ -34,6 +37,8 @@ class TrackStore:
             artist (dict): A simplified artist object from Spotify.
             position (int): The artist's place in the credits, 0 is the first.
         """
+        self._raw.store_artist(artist)
+
         artist_row = self._connection.execute(
             "SELECT name FROM artists WHERE artist_id = ?",
             (artist["id"],),
@@ -61,6 +66,13 @@ class TrackStore:
         Args:
             track (dict): A track object from Spotify.
         """
+        self._raw.store_track(track)
+
+        album = track.get("album")
+
+        if album is not None:
+            self._raw.store_album(album)
+
         song_row = self._connection.execute(
             "SELECT name, uri FROM songs WHERE song_id = ?",
             (track["id"],),
@@ -84,3 +96,11 @@ class TrackStore:
 
         for position, artist in enumerate(track["artists"]):
             self._store_artist(track["id"], artist, position)
+
+    def store_album(self, album: dict) -> None:
+        """Keeps the raw copy of an album.
+
+        Args:
+            album (dict): An album object from Spotify.
+        """
+        self._raw.store_album(album)

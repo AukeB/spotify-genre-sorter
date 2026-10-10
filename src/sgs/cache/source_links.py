@@ -50,4 +50,5 @@ class SourceLinks:
                 f"SELECT DISTINCT song_id, ? FROM ({song_ids_sql})",
                 (source_name, *params),
             )
+
             self._stats.count_added("song_sources", cursor.rowcount)

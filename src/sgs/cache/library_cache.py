@@ -21,6 +21,7 @@ from sgs.constants import (
     SPOTIFY_ME_ALBUMS_URL,
     SPOTIFY_ME_TRACKS_URL,
 )
+
 from sgs.api.spotify_api import fetch_total, get_all_pages
 
 logger = logging.getLogger(__name__)
@@ -100,9 +101,11 @@ class LibraryCache:
             (self._source_name, item_id),
         ).fetchone()
 
+        # Only items whose added_at differs from the cache reach this method, so an
+        # existing row always means a changed one.
         if row is None:
             self._stats.count_added("library_items")
-        elif row[0] != added_at:
+        else:
             self._stats.count_changed("library_items")
 
         self._connection.execute(
@@ -121,6 +124,7 @@ class LibraryCache:
             "SELECT COUNT(*) FROM library_items WHERE source_name = ?",
             (self._source_name,),
         ).fetchone()
+
         count = row[0]
 
         return count
@@ -138,6 +142,7 @@ class LibraryCache:
             "SELECT item_id FROM library_items WHERE source_name = ?",
             (self._source_name,),
         ).fetchall()
+
         removed_ids = [row[0] for row in rows if row[0] not in kept_ids]
 
         for item_id in removed_ids:
@@ -210,6 +215,7 @@ class LibraryCache:
         pages = get_all_pages(
             self._list_url, access_token, description=self._label.lower()
         )
+
         kept_ids: set[str] = set()
 
         for item in pages:
@@ -238,6 +244,7 @@ class LibraryCache:
         pages = get_all_pages(
             self._list_url, access_token, description=self._label.lower()
         )
+
         new_items = self._collect_new_items(pages)
 
         for item in new_items:
@@ -252,6 +259,7 @@ class LibraryCache:
                 cached_total,
                 total,
             )
+
             self._resync(access_token)
 
         self._source_links.rebuild(
@@ -353,6 +361,7 @@ class SavedAlbumsCache(LibraryCache):
             access_token (str): A valid Spotify access token.
         """
         album = item["album"]
+        self._track_store.store_album(album)
         tracks_url = f"{SPOTIFY_API_BASE_URL}/albums/{album['id']}/tracks"
         description = f'album "{album["name"]}"'
         pages = get_all_pages(tracks_url, access_token, description=description)

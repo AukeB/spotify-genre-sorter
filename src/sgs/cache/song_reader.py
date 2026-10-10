@@ -48,6 +48,7 @@ def read_songs_for_source(
             artist_ids=artist_ids,
             sources={source_name},
         )
+
         songs.append(song)
 
     return songs

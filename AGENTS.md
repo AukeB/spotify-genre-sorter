@@ -35,12 +35,13 @@
 
 ### Blank lines
 - Always put a blank line before a `return` statement, unless it is the first line of a block.
-- Put a blank line after a statement that spans multiple lines, such as a function call with arguments on separate lines.
+- Put a blank line after every statement that spans more than one line. This includes assignments, such as `rows = _rows(` with arguments on separate lines, and bare calls, such as a function call with arguments on separate lines. The blank line goes after the closing bracket, not inside the statement.
 - Put a blank line before a multi-line statement when the statement before it is at the same indentation level.
 - Put a blank line before and after a whole block that starts a deeper indentation level, such as `for`, `while`, `with`, `if`, and `try`. The blank line goes before the block's first line and after its last line, never between the header and the body. Skip the blank line before a block that is the first statement in its parent block.
 
 ### Logging
 - Do not use `print()` anywhere in the codebase. Output goes through `logging`, and the codebase should keep a proper logging setup: each module gets `logger = logging.getLogger(__name__)`, and logging is configured once in the entry point (`main.py`), inside the `if __name__ == "__main__":` block.
+- The one exception is the report that a command prints for the user, in `main.py`. It uses `typer.echo`, the standard way to print from a Typer command.
 
 ## Security
 - Keep tokens in memory only. Do not write them to disk or log them.

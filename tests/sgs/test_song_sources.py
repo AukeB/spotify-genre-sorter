@@ -23,6 +23,7 @@ def _config(liked=False, albums=False, top=False, playlists=False, time_range="m
             "include_collaborative_playlists": collaborative,
         },
     }
+
     config = ConfigModel.model_validate(data)
 
     return config

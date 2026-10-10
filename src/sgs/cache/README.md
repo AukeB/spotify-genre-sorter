@@ -15,6 +15,8 @@ Each source has a sync step that reads from Spotify and writes to the database. 
 | `library_cache.py` | Syncs liked songs and saved albums. Reads only items added since the last run, and re-reads the whole list when the cached count differs from Spotify's total. Contains the shared base class `LibraryCache` and two subclasses, `LikedSongsCache` and `SavedAlbumsCache`. |
 | `genre_response_cache.py` | Requests MusicBrainz and Last.fm for each artist that has no response from them yet. Stores the raw JSON, one row per artist and source. Parsing comes later. |
 | `top_track_cache.py` | Syncs top tracks per time range. Re-reads a ranking only when it is older than `TOP_TRACKS_MAX_AGE_HOURS`. |
+| `track_inspector.py` | Builds the plain-text report for one track, for the `track` command. Reads the database only. |
+| `raw_store.py` | Keeps the track, album, and simplified artist objects from Spotify exactly as returned, one row per object. A backup for re-parsing and for fields Spotify removes later. |
 | `track_store.py` | Saves a track, its artists, and the links between them. Every source uses it, so a song is stored the same way wherever it was found. |
 | `source_links.py` | Keeps the `song_sources` rows in line with the cached data, so each song records the sources it came from. |
 | `song_reader.py` | Reads cached songs for one source back out of the database, with no Spotify calls. |

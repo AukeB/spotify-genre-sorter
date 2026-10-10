@@ -75,15 +75,19 @@ class SpotifyCache:
         self._playlists = PlaylistCache(
             self._connection, self._stats, track_store, source_links
         )
+
         self._liked_songs = LikedSongsCache(
             self._connection, self._stats, track_store, source_links
         )
+
         self._saved_albums = SavedAlbumsCache(
             self._connection, self._stats, track_store, source_links
         )
+
         self._top_tracks = TopTrackCache(
             self._connection, self._stats, track_store, source_links
         )
+
         self._genre_responses = GenreResponseCache(self._connection, self._stats)
 
     def sync_playlists(

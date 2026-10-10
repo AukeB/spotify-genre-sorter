@@ -78,6 +78,24 @@ CREATE TABLE IF NOT EXISTS artist_genre_responses (
     PRIMARY KEY (artist_id, source)
 );
 
+CREATE TABLE IF NOT EXISTS raw_tracks (
+    song_id TEXT PRIMARY KEY,
+    fetched_at TIMESTAMP NOT NULL,
+    payload TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS raw_albums (
+    album_id TEXT PRIMARY KEY,
+    fetched_at TIMESTAMP NOT NULL,
+    payload TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS raw_artists (
+    artist_id TEXT PRIMARY KEY,
+    fetched_at TIMESTAMP NOT NULL,
+    payload TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS song_sources (
     song_id TEXT REFERENCES songs(song_id),
     source_name TEXT NOT NULL,

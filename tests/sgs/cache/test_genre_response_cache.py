@@ -1,6 +1,7 @@
 """Module for testing genre_response_cache.py"""
 
 import json
+import logging
 from unittest.mock import MagicMock
 
 import pytest
@@ -103,6 +104,7 @@ def test_sync_keeps_responses_stored_before_an_error(cache_path, monkeypatch):
     def musicbrainz(artist_id):
         if artist_id == "a2":
             raise RuntimeError("network down")
+
         result = _found(artist_id)
 
         return result
@@ -137,4 +139,19 @@ def test_sync_aborts_on_invalid_lastfm_key_without_storing_errors(cache_path, mo
         rows = _stored(cache)
 
     assert [row[1] for row in rows] == ["musicbrainz", "musicbrainz"]
+
+
+def test_sync_counts_only_found_artists_as_matched(cache_path, monkeypatch, caplog):
+    """An artist MusicBrainz does not match is stored, but is not counted as matched."""
+    not_matched = {"status": "not_matched", "payload": {"url_lookup": None, "artist": None}}
+    _stub_sources(monkeypatch, musicbrainz=lambda artist_id: not_matched, lastfm=None)
+    caplog.set_level(logging.INFO)
+
+    with SpotifyCache() as cache:
+        _add_artists(cache, [("a1", "Nobody")])
+        cache.sync_genre_responses(None)
+        rows = _stored(cache)
+
+    assert [row[2] for row in rows] == ["not_matched"]
+    assert any("0 matched" in record.getMessage() for record in caplog.records)
 

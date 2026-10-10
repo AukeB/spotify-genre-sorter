@@ -13,6 +13,7 @@ from sgs.constants import (
     TOP_TRACKS_MAX_AGE_HOURS,
     TOP_TRACKS_SOURCE_NAME,
 )
+
 from sgs.api.spotify_api import get_all_pages
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ class TopTrackCache:
             "SELECT MAX(fetched_at) FROM top_track_rankings WHERE time_range = ?",
             (time_range,),
         ).fetchone()
+
         last_fetched = row[0]
 
         if last_fetched is None:
@@ -89,6 +91,7 @@ class TopTrackCache:
             params={"time_range": time_range},
             description=f"top tracks ({time_range})",
         )
+
         tracks = usable_tracks(pages)
         fetched_at = utc_now()
 

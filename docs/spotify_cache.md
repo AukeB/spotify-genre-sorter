@@ -32,9 +32,11 @@ Removals are detected by comparing the cached count with the `total` Spotify rep
 
 ## A subset of the Spotify data
 
-The database is not a copy of your Spotify account. It stores only the songs, artists, and playlists this app needs to group songs by genre. It drops the rest, such as album art, follower counts, and playback details.
+The database is not a copy of your Spotify account. The parsed tables store only the songs, artists, and playlists this app needs to group songs by genre. They drop the rest, such as album art, follower counts, and playback details.
 
-Think of it as a subset of the Spotify data, shaped for the questions the app asks. Those questions are:
+The raw tables are the exception. They keep the track, album, and simplified artist objects exactly as Spotify returned them, and the MusicBrainz and Last.fm responses in full. That gives a backup for re-parsing later, and it keeps fields that Spotify may remove.
+
+The parsed tables are shaped for the questions the app asks. Those questions are:
 
 - Which songs are in each playlist, and in what order?
 - Which artists made each song?
@@ -67,6 +69,8 @@ erDiagram
     playlists ||--o{ playlist_songs : "contains"
     songs ||--o{ playlist_songs : "appears in"
     songs ||--o{ song_sources : "comes from"
+    songs ||--o| raw_tracks : "kept as"
+    artists ||--o| raw_artists : "kept as"
     library_items ||--o{ album_songs : "contains"
     songs ||--o{ album_songs : "appears in"
     songs ||--o{ top_track_rankings : "ranked in"
@@ -131,6 +135,21 @@ erDiagram
     song_sources {
         TEXT song_id PK, FK
         TEXT source_name PK
+    }
+    raw_tracks {
+        TEXT song_id PK
+        TIMESTAMP fetched_at
+        TEXT payload
+    }
+    raw_albums {
+        TEXT album_id PK
+        TIMESTAMP fetched_at
+        TEXT payload
+    }
+    raw_artists {
+        TEXT artist_id PK
+        TIMESTAMP fetched_at
+        TEXT payload
     }
 ```
 
@@ -245,6 +264,30 @@ The top tracks for each time range, in ranking order. `fetched_at` decides wheth
 | `song_id` | TEXT | 🟧 FK | Refers to `songs.song_id` |
 | `fetched_at` | TIMESTAMP | | When this ranking was read from Spotify |
 
+### artist_genre_responses
+
+The raw JSON that MusicBrainz and Last.fm returned for each artist, one row per artist and source. `status` says what the source answered, and `payload` holds the response as it came back. Nothing is parsed here yet.
+
+| Column | Type | Key | Description |
+|---|---|---|---|
+| `artist_id` | TEXT | 🟦🟧 PK, FK | Refers to `artists.artist_id` |
+| `source` | TEXT | 🟦 PK | `musicbrainz` or `lastfm` |
+| `fetched_at` | TIMESTAMP | | When the response was requested |
+| `status` | TEXT | | `found`, `not_matched` (MusicBrainz), or `error` (Last.fm) |
+| `payload` | TEXT | | The raw JSON. For MusicBrainz it holds the URL lookup and the artist record. For Last.fm it holds the response body. |
+
+### raw_tracks, raw_albums, raw_artists
+
+Backups of the Spotify objects, exactly as Spotify returned them. Each table holds one row per Spotify ID, and a newer copy replaces the older one. These tables are not used for queries yet.
+
+| Table | Key | Holds |
+|---|---|---|
+| `raw_tracks` | `song_id` | The full track object |
+| `raw_albums` | `album_id` | The album object, from the album nested in a track or from the saved-albums list |
+| `raw_artists` | `artist_id` | The simplified artist object, as it appears inside a track |
+
+Each row has `fetched_at` (when the copy was taken) and `payload` (the JSON).
+
 ## Join keys
 
 These are the columns used to combine tables:
@@ -278,6 +321,8 @@ On each run, the app updates the cache in this order:
 7. Run the genre grouping as local queries, without further API calls.
 
 Each playlist and each album is written in one transaction, so an interrupted run never leaves one half-updated.
+
+Whenever a track is stored, its raw copy and the raw copies of its album and artists are stored in the same transaction, as part of steps 1 to 3.
 
 The log shows how long each sync took, how many rows were added and changed, and how many items were already cached.
 

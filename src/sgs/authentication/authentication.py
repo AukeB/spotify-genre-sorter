@@ -13,6 +13,7 @@ from sgs.authentication.utils import (
     generate_state,
     parse_token_response,
 )
+
 from sgs.constants import (
     LOGIN_TIMEOUT_SECONDS,
     SPOTIFY_AUTHORIZE_URL,
@@ -20,6 +21,7 @@ from sgs.constants import (
     SPOTIFY_SCOPES,
     SPOTIFY_TOKEN_URL,
 )
+
 from sgs.errors import SpotifyAuthError
 
 logger = logging.getLogger(__name__)
@@ -123,10 +125,13 @@ class SpotifyAuthenticator:
 
         if params is None:
             raise SpotifyAuthError("Timed out waiting for the Spotify callback.")
+
         if params.get("state") != state:
             raise SpotifyAuthError("State mismatch in Spotify callback.")
+
         if "error" in params:
             raise SpotifyAuthError(f"Spotify login failed: {params['error']}")
+
         if "code" not in params:
             raise SpotifyAuthError("Spotify callback did not include a code.")
 
@@ -200,6 +205,7 @@ class SpotifyAuthenticator:
             "Opening browser for Spotify login. If it does not open, visit: %s",
             authorize_url,
         )
+
         webbrowser.open(authorize_url)
 
         code = self._wait_for_auth_code(state)
@@ -223,6 +229,7 @@ class SpotifyAuthenticator:
                 access_token = self.login().access_token
 
                 return access_token
+
             try:
                 self._token = self._refresh(self._token.refresh_token)
             except SpotifyAuthError:
