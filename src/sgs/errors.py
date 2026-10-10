@@ -30,6 +30,12 @@ class RetryableApiError(Exception):
             retry_after (float | None): Seconds to wait, or None if unknown.
             status_code (int | None): The HTTP status code, if there was one.
         """
-        super().__init__("The API asked for the request to be retried")
+        if status_code is None:
+            message = "The API asked for the request to be retried"
+        else:
+            message = (
+                f"The API returned HTTP {status_code}, so the request will be retried"
+            )
+        super().__init__(message)
         self.retry_after = retry_after
         self.status_code = status_code

@@ -108,3 +108,24 @@ def test_retry_does_not_retry_other_errors(monkeypatch):
         wrapped()
 
     sleep.assert_not_called()
+
+
+def test_retry_never_waits_less_than_backoff_when_server_says_zero(monkeypatch):
+    """A Retry-After of 0 still waits for the normal backoff instead of retrying at once."""
+    sleep = MagicMock()
+    monkeypatch.setattr("sgs.utils.retry.time.sleep", sleep)
+    calls = {"count": 0}
+
+    def func():
+        calls["count"] += 1
+
+        if calls["count"] == 1:
+            raise RetryableApiError(0.0)
+
+        return "ok"
+
+    wrapped = retry(RetryableApiError, max_attempts=3, base_delay=2.0, backoff=2.0, max_delay=60.0)(func)
+
+    assert wrapped() == "ok"
+    assert sleep.call_args.args[0] == 2.0
+

@@ -42,14 +42,15 @@ def _delay_seconds(
             asks for is longer than max_delay.
     """
     retry_after: float | None = getattr(error, "retry_after", None)
+    exponential = min(base_delay * backoff ** (attempt - 1), max_delay)
 
     if retry_after is None:
-        exponential = base_delay * backoff ** (attempt - 1)
-        delay = min(exponential, max_delay)
+        delay = exponential
     elif retry_after > max_delay:
         delay = None
     else:
-        delay = retry_after
+        # Never retry sooner than the normal backoff, even if the server says 0.
+        delay = max(retry_after, exponential)
 
     return delay
 

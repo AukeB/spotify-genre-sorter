@@ -20,12 +20,12 @@ Each source has a sync step that reads from Spotify and writes to the database. 
 | `song_reader.py` | Reads cached songs for one source back out of the database, with no Spotify calls. |
 | `sync_stats.py` | Counts rows added and changed during a sync, and times the sync. Logs both when the sync ends. |
 | `track_filters.py` | Drops null entries from Spotify track lists. |
-| `time_utils.py` | Creates the UTC timestamps stored in the database, and the cutoff used for freshness checks. |
 
 ## Order of work during a full sync
 
 1. `playlist_cache.py` syncs playlists and their songs.
 2. `library_cache.py` syncs liked songs, then saved albums.
 3. `top_track_cache.py` syncs top tracks for the configured time range.
+4. `genre_response_cache.py` requests MusicBrainz, and Last.fm when a key is given, for artists that have no response yet.
 
-Each step writes its songs through `track_store.py` and its links through `source_links.py`.
+The first three steps write their songs through `track_store.py` and their links through `source_links.py`. Timestamps come from `src/sgs/utils/time_utils.py`.
