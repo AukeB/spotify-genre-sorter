@@ -1,26 +1,42 @@
 [project]
-name = "template-repo"
+name = "spotify-genre-sorter"
 version = "0.1.0"
-description = "Template repository"
+description = "Given a set of Spotify songs, automatically group all songs in sorted playlists."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
     "pydantic>=2.12.3",
     "pyyaml>=6.0.3",
+    "requests>=2.34.2",
+    "typer>=0.26.7",
 ]
 
 [dependency-groups]
 dev = [
-    "docstring-tailor>=0.4.0",
+    "docstring-tailor>=0.4.1",
     "pytest>=8.4.2",
     "pytest-cov>=7.1.0",
     "ruff>=0.11.6",
     "ty>=0.0.29",
 ]
 
+# Pytest settings.
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
+
+# Docstring tailor settings.
 
 [tool.docstring_tailor]
 line-length = 80
 style = "google"
+
+# Build system and backend.
+
+[build-system]
+requires = ["uv_build>=0.8.13,<0.9.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "sgs"
+module-root = "src"

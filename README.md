@@ -1,48 +1,89 @@
-# Template repository
+# Spotify genre sorter
 
-This is a template repository that can be used for starting other repositories.
+Given a set of Spotify songs, automatically group all songs in sorted playlists.
 
-## Validation stack
+## Requirements
 
-This template comes with a fully configured validation stack covering static analysis, testing, runtime data validation, and git hook automation.
+- Python 3.12
+- [uv](https://docs.astral.sh/uv/) for dependency management
+- A Spotify account and a Spotify app (see [Spotify app setup](#spotify-app-setup))
 
-| Tool | Description |
-|---|---|
-| **Ruff** | Handles formatting, linting, import sorting, and annotation coverage enforcement in a single tool, replacing Black, Flake8, and isort. |
-| **Docstring-tailor** | Handles formatting (line wrapping) for docstrings. |
-| **ty** | Static type checker that verifies types flow correctly through the codebase, replacing Mypy. |
-| **pytest** | Runs the test suite with branch-level coverage measurement via pytest-cov. |
-| **Pydantic** | Enforces the shape and type of data at runtime boundaries. |
+## Installation
 
-## Makefile
+```bash
+git clone <repository-url>
+cd spotify-genre-sorter
+uv sync
+```
 
-The Makefile orchestrates the validation stack with the following commands, all
-run via `uv` for consistent environment management:
+## Spotify app setup
 
-| Command | Description |
-|---|---|
-| `make ruff` | Runs Ruff linting with auto-fix, then formats the codebase. |
-| `make format-docstrings` | Applies `docstring-tailor` to all python modules |
-| `make ty` | Runs ty for static type checking. |
-| `make pytest` | Runs the full test suite with verbose output and branch coverage. |
-| `make clean` | Removes caches and temporary files (`__pycache__`, `.ruff_cache`, `.ty_cache`, `.pytest_cache`, `.coverage`, `artifacts`). |
-| `make git` | Stages all changes, commits with the default message `"Updated"`, and pushes to remote. |
-| `make all` | Runs the full workflow: `ruff` → `docstring-tailor` → `ty` → `pytest` → `clean` → `git`. |
+The app logs in with Spotify's Authorization Code flow with PKCE, so you need a
+Spotify app for its client ID but no client secret.
 
-## Branches
+1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+   and click **Create app**. Any name and description will do. The **Website**
+   field is optional and can be left empty.
+2. Under **Redirect URIs**, add exactly:
 
-This repository is structured as one template per branch, so you can start a new project from whichever base fits it best.
+   ```text
+   http://127.0.0.1:5000/callback
+   ```
 
-| Branch | Use case |
-|---|---|
-| `main` | Base template for 'normal' Python projects. |
-| `pygame_projects` | For general Python projects that will work with pygame. |
-| `pygame_grid_projects` | For Python projects that visualize grids (2D lists) with pygame. |
+   Spotify does not accept `localhost` as a redirect URI. Use the IP address
+   `127.0.0.1`, and save the app before logging in.
+3. Under **APIs used**, select **Web API**.
+4. Open the app's **Settings** page and copy the **Client ID**. Keep it secret. Keep it safe.
+5. If the app is in development mode, open **User Management** and add the
+   email address of the Spotify account you want to log in with. Otherwise
+   Spotify refuses the login.
 
-To use a branch as the starting point for a new repository, switch to it on GitHub, then click **"Use this template" → "Create a new repository"** — this generates a new repo from that branch's snapshot.
+The redirect URI must match `SPOTIFY_REDIRECT_URI` in
+[src/sgs/constants.py](src/sgs/constants.py). If you change one, change the
+other too.
 
-## Possible additions
+## Usage
 
-| Tool | Description |
-|---|---|
-| **prek** | Rust-based replacement for `pre-commit` that runs hooks in parallel before every commit, significantly faster than `pre-commit`. Would apply `ruff` and `ty` (and eventually `docstring-tailor`, once it supports pre-commit hooks) automatically before each commit. Not currently adopted — feels like more process than needed for personal hobby projects. |
+Run the app with your client ID:
+
+```bash
+uv run python main.py --client-id YOUR_CLIENT_ID
+```
+
+Your browser opens the Spotify login page. After you approve access, the browser
+shows "Login complete" and the terminal prints the name of the logged-in user.
+
+The login only runs when the app starts. Tokens are kept in memory and are not
+saved to disk, so you log in again each time you run the app.
+
+### Permissions
+
+The app requests these scopes:
+
+- `playlist-read-private`
+- `playlist-read-collaborative`
+- `user-library-read`
+
+## Development
+
+```bash
+uv run pytest        # run tests
+uv run ruff check .  # lint
+uv run ty check      # type-check
+make pytest          # tests with coverage
+make ruff            # format and lint
+```
+
+See [AGENTS.md](AGENTS.md) for the code conventions used in this project.
+
+## Troubleshooting
+
+- **Spotify shows an error about the redirect URI**: the redirect URI in the
+  Spotify app doesn't exactly match `http://127.0.0.1:5000/callback`. Check for
+  `localhost`, a trailing slash, or a different port.
+- **Login is refused for your account**: the app is in development mode and your
+  Spotify account isn't added under **User Management**.
+- **"Could not start callback server"**: port 5000 is already in use. Stop the
+  other program using it, then run the app again.
+- **"Timed out waiting for the Spotify callback"**: the browser didn't reach the
+  local server within 2 minutes. Run the app again and approve access promptly.

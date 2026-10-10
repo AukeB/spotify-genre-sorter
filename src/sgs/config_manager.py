@@ -4,8 +4,8 @@ import yaml
 
 from pathlib import Path
 
-from src.my_project.constants import CONFIG_PATH
-from src.my_project.config_model import ConfigModel
+from sgs.constants import CONFIG_PATH
+from sgs.config_model import ConfigModel
 
 
 class ConfigManager:
@@ -13,6 +13,9 @@ class ConfigManager:
 
     Handles reading a YAML config file from disk and parsing it into a validated
     Pydantic model.
+
+    Attributes:
+        config_path (Path): Path to the YAML configuration file to load.
     """
 
     def __init__(self, config_path: Path = CONFIG_PATH) -> None:
@@ -36,4 +39,6 @@ class ConfigManager:
         with open(self.config_path) as file:
             config = yaml.safe_load(file)
 
-        return ConfigModel(**config)
+        config_model = ConfigModel(**config)
+
+        return config_model

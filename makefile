@@ -1,5 +1,5 @@
 # Default project folder
-PROJECT_NAME = src/my_project
+PROJECT_NAME = src/sgs
 
 # Format and lint code with Ruff
 ruff:
