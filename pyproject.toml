@@ -1,0 +1,26 @@
+[project]
+name = "template-repo"
+version = "0.1.0"
+description = "Template repository"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.12.3",
+    "pyyaml>=6.0.3",
+]
+
+[dependency-groups]
+dev = [
+    "docstring-tailor>=0.4.0",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.11.6",
+    "ty>=0.0.29",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.docstring_tailor]
+line-length = 80
+style = "google"

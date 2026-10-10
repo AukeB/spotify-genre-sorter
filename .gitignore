@@ -1,0 +1,57 @@
+# Folders
+__pycache__/
+.vscode/
+.ruff_cache/
+.ipynb_checkpoints/
+data/
+artifacts/
+
+# Virtual environments
+venv/
+.venv/
+.env/
+
+# Python bytecode
+*.pyc
+*.pyo
+*.pyd
+
+# Test and coverage
+htmlcov/
+.coverage
+.coverage.*
+*.cover
+.cache
+.nox/
+
+# Packaging and build
+build/
+dist/
+*.egg-info/
+.eggs/
+*.manifest
+*.spec
+
+# Logs
+*.log
+*.out
+*.err
+
+# OS-specific files (macOS + Windows)
+.DS_Store
+.AppleDouble
+._*
+Thumbs.db
+Desktop.ini
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# Project-specific
+bitmaps/.~lock*
+bitmaps/.~lock.*#
+**/readme.todo
