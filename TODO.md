@@ -34,6 +34,9 @@
 - [ ] Look into track and album data from Spotify (release date, album type, length, explicit flag), and whether it helps with era and other groupings
 - [ ] Check which track and album fields still come back for this app, since some were removed in February 2026
 - [ ] Potentially store track and album data in the database
+- [ ] Import a WhatsApp chat export, find the Spotify links shared in it, expand shared albums into tracks, and create a playlist from them (from the old `more_spotify` script)
+- [ ] Save songs to the user's library (needs the `user-library-modify` scope)
+- [ ] Genre analysis and plots, such as genre counts per artist (from the old `spotify_genres.ipynb`)
 - [ ] Add a way to show everything stored in the database for one track ID (song, artists, playlists, sources, genre responses)
 - [ ] Packaging and distribution
 
