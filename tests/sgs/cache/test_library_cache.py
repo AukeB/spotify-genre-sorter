@@ -1,5 +1,13 @@
 """Module for testing library_cache.py"""
 
+import sqlite3
+
+import pytest
+
+from sgs.cache.library_cache import LibraryCache
+from sgs.cache.source_links import SourceLinks
+from sgs.cache.sync_stats import SyncStats
+from sgs.cache.track_store import TrackStore
 from sgs.constants import (
     LIKED_SOURCE_NAME,
     SAVED_ALBUMS_SOURCE_NAME,
@@ -170,3 +178,22 @@ def test_saved_albums_full_read_stores_albums_after_a_known_one(cache_path, spot
     songs = _sync_albums()
 
     assert sorted(song.id for song in songs) == ["t1", "t2"]
+
+
+# Testing the "_item_id" and "_store_item" methods from the "LibraryCache" class.
+
+
+def test_base_library_cache_requires_subclass_methods():
+    """The base class cannot read or store an item, so subclasses must define both methods."""
+    connection = sqlite3.connect(":memory:")
+    stats = SyncStats()
+    cache = LibraryCache(connection, stats, TrackStore(connection, stats), SourceLinks(connection, stats))
+
+    with pytest.raises(NotImplementedError):
+        cache._item_id({})
+
+    with pytest.raises(NotImplementedError):
+        cache._store_item({}, "token")
+
+    connection.close()
+
