@@ -1,6 +1,6 @@
 # Agent instructions
 
-`my_project` in these instructions is a placeholder for the project's package name, so that this file can stay project-agnostic. The project-specific details are in the section at the bottom.
+`my_project` in these instructions is a placeholder for the project's package name, so that this file can stay generic and project-agnostic.
 
 ## Commands
 - Install dependencies: `uv sync`
@@ -105,6 +105,3 @@ features:
 ## Working style
 - Run `uv run pytest` and `uv run ruff check .` after code changes and report the results.
 - Do not commit or push unless asked.
-
-## Project-specific
-- No project specific things yet.
