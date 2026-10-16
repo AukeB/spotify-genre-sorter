@@ -23,24 +23,45 @@
 ### Docstrings
 - Write docstrings in Google style with `Args:`, `Returns:`, and `Raises:` sections. In the `Returns:` section, name the returned variable and its type, like `Args:` entries (e.g. `user (User): The loaded user.`).
 - Only include a `Returns:` section when the function returns a value. A function that returns `None` has no `Returns:` section.
-- Class docstrings must have an `Attributes:` section. Classes that users call directly must also have an `Example:` section.
+- Class docstrings get an `Attributes:` section only when the class has attributes: instance attributes, dataclass fields, TypedDict keys, or enum members. A class without attributes has no `Attributes:` section, just as a function that returns nothing has no `Returns:` section. Do not write `Attributes: None`.
+- Classes that users call directly must also have an `Example:` section.
 
 ### Code order
 - Order code bottom-up: define a function or method before the code that calls it. In a module, put helper functions above the functions that use them.
 - In a class, put `__init__`, `@classmethod`, and `@staticmethod` methods at the top, next to each other. Then put the other methods below them, with each helper defined above the method that calls it.
+- Recursion does not change the bottom-up rule. When functions call each other in a cycle, one call necessarily points forward. Break the cycle at the function that is part of the cycle and is called first from the public entry point: put it at the bottom, so the functions it calls sit above it. The one call that points back to it is the only forward reference.
+  - Example: `main` calls `run`, and `run` calls `step`. `step` calls `visit`, and `visit` calls `step` again. The cycle is `step` and `visit`. `step` is reached first from `run`, so `step` goes at the bottom and `visit` goes above it:
+
+    ```python
+    def visit(node: Node) -> Result:
+        ...
+        return step(node.child)
+
+
+    def step(node: Node) -> Result:
+        ...
+        return visit(node)
+    ```
+
+    Here `visit` calls `step`, which is defined below it. That is the single forward reference. `run` and `main` go below both of them, since they are not part of the cycle.
+- Framework hooks, such as libcst `visit_*` and `leave_*` methods, are not called by our code, so they may go in traversal order after the helpers they use.
 
 ### Statements
 - Do not nest calls inside other calls or inside the arguments of a call, including comprehensions. Assign the inner result to a variable on its own line, then pass that variable on (e.g. `orders.extend(new_orders)` after `new_orders = _load_orders(...)`).
 - Do not return an expression directly. Assign it to a variable first, then return the variable (e.g. `user = parse_user(response)` then `return user`). A plain variable or attribute, such as `return self._user`, is fine.
+- Do not use `assert` in production code. Assertions are for debugging and disappear when Python runs with optimisations. Check the condition with an `if` statement and raise an explicit exception instead. `assert` is fine in tests, where pytest uses it for checks.
 
 ### Blank lines
 - Always put a blank line before a `return` statement, unless it is the first line of a block.
 - Put a blank line after every statement that spans more than one line. This includes assignments, such as `rows = _rows(` with arguments on separate lines, and bare calls, such as a function call with arguments on separate lines. The blank line goes after the closing bracket, not inside the statement.
 - Put a blank line before a multi-line statement when the statement before it is at the same indentation level.
 - Put a blank line before and after a whole block that starts a deeper indentation level, such as `for`, `while`, `with`, `if`, and `try`. The blank line goes before the block's first line and after its last line, never between the header and the body. Skip the blank line before a block that is the first statement in its parent block.
+- Keep a statement and the branches that belong to it together, with no blank line between them. This covers `if`/`elif`/`else` and `try`/`except`/`else`/`finally`. Separate independent `if` statements with blank lines, as for any other block.
 
 ### Logging
-- Do not use `print()` anywhere in the codebase. Output goes through `logging`, and the codebase should keep a proper logging setup: each module gets `logger = logging.getLogger(__name__)`, and logging is configured once in the entry point (`main.py`), inside the `if __name__ == "__main__":` block.
+- Do not use `print()` anywhere in the codebase. Output goes through `logging`.
+- A module gets `logger = logging.getLogger(__name__)` only if it actually logs through it. Do not define a logger in a module that never uses it.
+- Configure logging once, in the application's single entry point that runs however the app is started: the Typer app callback in `main.py`. Do not configure it inside an `if __name__ == "__main__":` block, because installed console scripts and pre-commit hooks never run that block.
 - The one exception is the report that a command prints for the user, in `main.py`. It uses `typer.echo`, the standard way to print from a Typer command.
 
 ## Security
@@ -86,8 +107,4 @@ features:
 - Do not commit or push unless asked.
 
 ## Project-specific
-- Custom exceptions live in `src/sgs/errors.py`.
-- Spotify genre sorter: groups a user's Spotify songs into playlists by genre.
-- Python 3.12, managed with `uv`.
-- The package is named `sgs`, so `my_project` in the rules above is `sgs` in this repo (for example `src/sgs/errors.py` and `from sgs.constants import ...`).
-- Put Spotify authentication code in `src/sgs/authentication/`. `SpotifyAuthenticator` stays in `authentication.py`; token models, helpers, and the callback server live in their own modules.
+- No project specific things yet.
