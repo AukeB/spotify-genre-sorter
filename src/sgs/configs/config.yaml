@@ -1,7 +1,7 @@
 sources:
-  liked_songs: false
-  saved_albums: false
-  top_tracks: false
+  liked_songs: true
+  saved_albums: true
+  top_tracks: true
   your_playlists: true
 
 options:
