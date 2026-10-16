@@ -11,6 +11,11 @@ format-docstrings:
 	uv run docstring_tailor format
 	@echo "🔧 Successfully executed docstring-tailor."
 
+# Static type-check code with pyright (same engine as Pylance in VS Code).
+pyright:
+	uv run pyright
+	@echo "🔍 Successfully executed pyright."
+
 # Static type-check code with ty.
 ty:
 	uv run ty check
@@ -37,7 +42,7 @@ clean:
 		-name '.pytest_cache' \
 	\) -exec rm -rf {} +
 	@rm -f .coverage .python-version
-	@rm -rf artifacts dist
+	@rm -rf artifacts
 	@echo "🧹 Successfully cleaned project."
 
 # Commit and push everything to git
@@ -51,6 +56,7 @@ git:
 all:
 	make ruff
 	make format-docstrings
+	make pyright
 	make ty
 	make pytest
 	make clean
