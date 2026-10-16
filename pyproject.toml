@@ -43,3 +43,6 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "sgs"
 module-root = "src"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN"]  # tests are not held to annotation rules
