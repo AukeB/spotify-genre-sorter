@@ -25,6 +25,7 @@
 - Only include a `Returns:` section when the function returns a value. A function that returns `None` has no `Returns:` section.
 - Class docstrings get an `Attributes:` section only when the class has attributes: instance attributes, dataclass fields, TypedDict keys, or enum members. A class without attributes has no `Attributes:` section, just as a function that returns nothing has no `Returns:` section. Do not write `Attributes: None`.
 - Classes that users call directly must also have an `Example:` section.
+- Data classes do not need an `Example:` section. This covers dataclasses, `TypedDict`s, Pydantic config models, and `NamedTuple`s, which only hold data.
 
 ### Code order
 - Order code bottom-up: define a function or method before the code that calls it. In a module, put helper functions above the functions that use them.
