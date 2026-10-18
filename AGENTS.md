@@ -27,6 +27,7 @@
 - Classes that users call directly must also have an `Example:` section.
 - Data classes do not need an `Example:` section. This covers dataclasses, `TypedDict`s, Pydantic config models, and `NamedTuple`s, which only hold data.
 - Exception classes do not need an `Example:` section either. Users catch them rather than construct them.
+- `Example:` sections follow the Python REPL convention. Each statement starts with `>>> `, each continuation line of a multi-line statement starts with `... `, and any output follows its statement on the next line with no prompt. Put one statement on each line.
 
 ### Code order
 - Order code bottom-up: define a function or method before the code that calls it. In a module, put helper functions above the functions that use them.
