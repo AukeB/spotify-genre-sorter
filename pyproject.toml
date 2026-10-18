@@ -3,7 +3,7 @@ name = "spotify-genre-sorter"
 version = "0.1.0"
 description = "Given a set of Spotify songs, automatically group all songs in sorted playlists."
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.12.3",
     "pyyaml>=6.0.3",
