@@ -29,6 +29,7 @@
 ### Code order
 - Order code bottom-up: define a function or method before the code that calls it. In a module, put helper functions above the functions that use them.
 - In a class, put `__init__`, `@classmethod`, and `@staticmethod` methods at the top, next to each other. Then put the other methods below them, with each helper defined above the method that calls it.
+- `__init__` is an exception to the bottom-up rule. It stays at the top of the class even when it calls helpers defined below it.
 - Recursion does not change the bottom-up rule. When functions call each other in a cycle, one call necessarily points forward. Break the cycle at the function that is part of the cycle and is called first from the public entry point: put it at the bottom, so the functions it calls sit above it. The one call that points back to it is the only forward reference.
   - Example: `main` calls `run`, and `run` calls `step`. `step` calls `visit`, and `visit` calls `step` again. The cycle is `step` and `visit`. `step` is reached first from `run`, so `step` goes at the bottom and `visit` goes above it:
 
@@ -57,12 +58,19 @@
 - Put a blank line before a multi-line statement when the statement before it is at the same indentation level.
 - Put a blank line before and after a whole block that starts a deeper indentation level, such as `for`, `while`, `with`, `if`, and `try`. The blank line goes before the block's first line and after its last line, never between the header and the body. Skip the blank line before a block that is the first statement in its parent block.
 - Keep a statement and the branches that belong to it together, with no blank line between them. This covers `if`/`elif`/`else` and `try`/`except`/`else`/`finally`. Separate independent `if` statements with blank lines, as for any other block.
+- In test files, two blank lines separate the imports from the section comments. Ruff's import sorter (I001) rejects this, so `pyproject.toml` must ignore I001 for test files if it is not already configured:
+
+  ```toml
+  [tool.ruff.lint.per-file-ignores]
+  "tests/**" = ["I001"]
+  ```
 
 ### Logging
 - Do not use `print()` anywhere in the codebase. Output goes through `logging`.
 - A module gets `logger = logging.getLogger(__name__)` only if it actually logs through it. Do not define a logger in a module that never uses it.
-- Configure logging once, in the application's single entry point that runs however the app is started: the Typer app callback in `main.py`. Do not configure it inside an `if __name__ == "__main__":` block, because installed console scripts and pre-commit hooks never run that block.
-- The one exception is the report that a command prints for the user, in `main.py`. It uses `typer.echo`, the standard way to print from a Typer command.
+- Configure logging once, in the application's single entry point that runs however the app is started: `main.py`. If the codebase uses Typer, that is the Typer app callback. Otherwise, it is the start of `main()`. Do not configure it inside an `if __name__ == "__main__":` block, because installed console scripts and pre-commit hooks never run that block.
+- The Typer rules in this section apply only when the codebase uses Typer. If it does not, ignore them.
+- If the codebase uses Typer, the one exception is the report that a command prints for the user, in `main.py`. It uses `typer.echo`, the standard way to print from a Typer command.
 
 ## Security
 - Keep tokens in memory only. Do not write them to disk or log them.
@@ -101,6 +109,7 @@ features:
   - `# Testing the "my_function_name" function.`
   - `# Testing the "my_method_name" method from the "MyClass" class.`
 - Group all tests of the same function or method under one comment.
+- Tests must reach 100% line and branch coverage of `src/`. Check it with `uv run pytest --cov=src/<pkg> --cov-branch --cov-report=term-missing`. A change that drops coverage below 100% is not finished until the missing lines or branches are tested.
 
 ## Working style
 - Run `uv run pytest` and `uv run ruff check .` after code changes and report the results.
