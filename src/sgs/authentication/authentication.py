@@ -13,7 +13,6 @@ from sgs.authentication.utils import (
     generate_state,
     parse_token_response,
 )
-
 from sgs.constants import (
     LOGIN_TIMEOUT_SECONDS,
     SPOTIFY_AUTHORIZE_URL,
@@ -21,7 +20,6 @@ from sgs.constants import (
     SPOTIFY_SCOPES,
     SPOTIFY_TOKEN_URL,
 )
-
 from sgs.errors import SpotifyAuthError
 
 logger = logging.getLogger(__name__)
@@ -57,6 +55,7 @@ class SpotifyAuthenticator:
             session (requests.Session | None): HTTP session, injectable for
                 tests.
         """
+
         self.client_id = client_id
         self.redirect_uri = redirect_uri
         self.scopes = scopes if scopes is not None else SPOTIFY_SCOPES
@@ -73,6 +72,7 @@ class SpotifyAuthenticator:
         Returns:
             authorize_url (str): The full authorization URL.
         """
+
         params = {
             "client_id": self.client_id,
             "response_type": "code",
@@ -100,6 +100,7 @@ class SpotifyAuthenticator:
             SpotifyAuthError: If the server cannot start, the state does not
                 match, the user denied access, or no callback arrives in time.
         """
+
         parsed = urlparse(self.redirect_uri)
 
         if parsed.hostname is None or parsed.port is None:
@@ -149,6 +150,7 @@ class SpotifyAuthenticator:
         Returns:
             token (TokenInfo): The new token.
         """
+
         response = self._session.post(
             SPOTIFY_TOKEN_URL,
             data={
@@ -176,6 +178,7 @@ class SpotifyAuthenticator:
         Returns:
             token (TokenInfo): The refreshed token.
         """
+
         response = self._session.post(
             SPOTIFY_TOKEN_URL,
             data={
@@ -197,6 +200,7 @@ class SpotifyAuthenticator:
         Returns:
             token (TokenInfo): The new token.
         """
+
         code_verifier, code_challenge = generate_pkce_pair()
         state = generate_state()
         authorize_url = self._build_authorize_url(state, code_challenge)
@@ -219,6 +223,7 @@ class SpotifyAuthenticator:
         Returns:
             access_token (str): A valid access token.
         """
+
         if self._token is None:
             access_token = self.login().access_token
 

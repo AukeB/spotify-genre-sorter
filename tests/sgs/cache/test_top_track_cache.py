@@ -5,7 +5,12 @@ from sgs.spotify_cache import SpotifyCache
 
 
 def _track(track_id):
-    """Builds a Spotify track object."""
+    """Builds a Spotify track object.
+
+    Args:
+        track_id (str): The Spotify track ID.
+    """
+
     track = {
         "id": track_id,
         "name": f"Song {track_id}",
@@ -18,7 +23,12 @@ def _track(track_id):
 
 
 def _sync_top(time_range="medium_term"):
-    """Runs one top-tracks sync and returns the cached songs for the time range."""
+    """Runs one top-tracks sync and returns the cached songs for the time range.
+
+    Args:
+        time_range (str): The Spotify time range, such as "short_term".
+    """
+
     with SpotifyCache() as cache:
         cache.sync_top_tracks("token", time_range)
         songs = cache.get_songs_for_source(TOP_TRACKS_SOURCE_NAME)
@@ -31,7 +41,9 @@ def _sync_top(time_range="medium_term"):
 
 def test_sync_passes_configured_time_range(cache_path, spotify_calls):
     """The time range is sent as a query parameter to the top tracks endpoint."""
-    calls = spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    track = _track("t1")
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [track]}
+    calls = spotify_calls(responses)
 
     songs = _sync_top("long_term")
 
@@ -42,7 +54,9 @@ def test_sync_passes_configured_time_range(cache_path, spotify_calls):
 
 def test_sync_skips_request_while_ranking_is_fresh(cache_path, spotify_calls):
     """A recent ranking for the same time range is not requested from Spotify again."""
-    calls = spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    track = _track("t1")
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [track]}
+    calls = spotify_calls(responses)
 
     _sync_top()
     songs = _sync_top()
@@ -53,14 +67,20 @@ def test_sync_skips_request_while_ranking_is_fresh(cache_path, spotify_calls):
 
 def test_sync_requests_ranking_again_when_stale(cache_path, spotify_calls):
     """A ranking older than TOP_TRACKS_MAX_AGE_HOURS is requested again."""
-    spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    track = _track("t1")
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [track]}
+    spotify_calls(responses)
     _sync_top()
 
     with SpotifyCache() as cache:
         cache._connection.execute("UPDATE top_track_rankings SET fetched_at = '2000-01-01T00:00:00+00:00'")
         cache._connection.commit()
 
-    calls = spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    track = _track("t1")
+
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [track]}
+
+    calls = spotify_calls(responses)
     _sync_top()
 
     assert calls.pages.call_count == 1
@@ -68,10 +88,16 @@ def test_sync_requests_ranking_again_when_stale(cache_path, spotify_calls):
 
 def test_sync_keeps_only_the_current_time_range_in_source(cache_path, spotify_calls):
     """Switching the time range replaces the songs shown for the top tracks source."""
-    spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    track = _track("t1")
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [track]}
+    spotify_calls(responses)
     _sync_top("medium_term")
 
-    spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t2")]})
+    track = _track("t2")
+
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [track]}
+
+    spotify_calls(responses)
     songs = _sync_top("long_term")
 
     assert [song.id for song in songs] == ["t2"]
@@ -79,7 +105,9 @@ def test_sync_keeps_only_the_current_time_range_in_source(cache_path, spotify_ca
 
 def test_sync_skips_null_entries(cache_path, spotify_calls):
     """Null entries in the top tracks response are not stored."""
-    spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [None, _track("t1")]})
+    track = _track("t1")
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [None, track]}
+    spotify_calls(responses)
 
     songs = _sync_top()
 
@@ -91,7 +119,9 @@ def test_sync_skips_null_entries(cache_path, spotify_calls):
 
 def test_sync_with_refresh_requests_fresh_ranking_again(cache_path, spotify_calls):
     """With refresh, a ranking that is still fresh is requested from Spotify again."""
-    calls = spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    track = _track("t1")
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [track]}
+    calls = spotify_calls(responses)
     _sync_top()
 
     with SpotifyCache() as cache:

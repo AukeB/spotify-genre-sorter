@@ -25,6 +25,7 @@ class TrackStore:
             connection (sqlite3.Connection): Open connection to the cache file.
             stats (SyncStats): Receives the counts of rows added and changed.
         """
+
         self._connection = connection
         self._stats = stats
         self._raw = RawStore(connection)
@@ -37,6 +38,7 @@ class TrackStore:
             artist (dict): A simplified artist object from Spotify.
             position (int): The artist's place in the credits, 0 is the first.
         """
+
         self._raw.store_artist(artist)
 
         artist_row = self._connection.execute(
@@ -66,6 +68,7 @@ class TrackStore:
         Args:
             track (dict): A track object from Spotify.
         """
+
         self._raw.store_track(track)
 
         album = track.get("album")
@@ -103,4 +106,5 @@ class TrackStore:
         Args:
             album (dict): An album object from Spotify.
         """
+
         self._raw.store_album(album)

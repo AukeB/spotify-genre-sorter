@@ -9,10 +9,17 @@ from sgs.api.musicbrainz_api import _find_linked_artist_id, fetch_musicbrainz_ar
 
 
 def _response(status_code, body=None):
-    """Builds a fake requests.Response with the given status and JSON body."""
+    """Builds a fake requests.Response with the given status and JSON body.
+
+    Args:
+        status_code (int): The HTTP status code.
+        body (dict | None): The JSON body, or None for an empty body.
+    """
+
     response = MagicMock()
     response.status_code = status_code
     response.json.return_value = body
+
     if status_code >= 400 and status_code != 404:
         response.raise_for_status.side_effect = requests.HTTPError(f"{status_code} error")
 
@@ -20,7 +27,12 @@ def _response(status_code, body=None):
 
 
 def _url_lookup(musicbrainz_id):
-    """Builds a URL lookup body that links a Spotify page to a MusicBrainz artist."""
+    """Builds a URL lookup body that links a Spotify page to a MusicBrainz artist.
+
+    Args:
+        musicbrainz_id (str): The MusicBrainz artist ID to link to.
+    """
+
     body = {
         "relations": [
             {"type": "free streaming", "artist": {"id": musicbrainz_id, "name": "Lambert"}},
@@ -35,7 +47,8 @@ def _url_lookup(musicbrainz_id):
 
 def test_find_linked_artist_id_returns_free_streaming_artist():
     """The artist of the free streaming relation is returned."""
-    assert _find_linked_artist_id(_url_lookup("mb-1")) == "mb-1"
+    lookup = _url_lookup("mb-1")
+    assert _find_linked_artist_id(lookup) == "mb-1"
 
 
 def test_find_linked_artist_id_returns_none_without_relation():
@@ -50,7 +63,8 @@ def test_find_linked_artist_id_returns_none_without_relation():
 def test_fetch_musicbrainz_artist_returns_found_with_raw_payload(mock_get):
     """A matched artist returns both raw responses in the payload."""
     artist_body = {"id": "mb-1", "genres": [{"name": "jazz"}], "tags": []}
-    mock_get.side_effect = [_response(200, _url_lookup("mb-1")), _response(200, artist_body)]
+    lookup = _url_lookup("mb-1")
+    mock_get.side_effect = [_response(200, lookup), _response(200, artist_body)]
 
     result = fetch_musicbrainz_artist("spotify-1")
 
@@ -97,7 +111,8 @@ def test_fetch_musicbrainz_artist_raises_on_server_error(mock_get):
 @patch("sgs.api.http.requests.get")
 def test_fetch_musicbrainz_artist_raises_on_artist_request_error(mock_get):
     """A server error on the artist request is raised."""
-    mock_get.side_effect = [_response(200, _url_lookup("mb-1")), _response(500)]
+    lookup = _url_lookup("mb-1")
+    mock_get.side_effect = [_response(200, lookup), _response(500)]
 
     with pytest.raises(requests.HTTPError):
         fetch_musicbrainz_artist("spotify-1")

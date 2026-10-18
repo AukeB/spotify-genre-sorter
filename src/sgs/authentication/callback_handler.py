@@ -18,7 +18,12 @@ from sgs.constants import SPOTIFY_REDIRECT_URI
 
 
 class CallbackServer(HTTPServer):
-    """Local HTTP server that holds the query parameters of the login callback."""
+    """Local HTTP server that holds the query parameters of the login callback.
+
+    Attributes:
+        callback_params (dict[str, str] | None): The query parameters of the
+            callback, or None until the callback arrives.
+    """
 
     callback_params: dict[str, str] | None = None
 
@@ -29,12 +34,14 @@ class CallbackHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802 (name required by BaseHTTPRequestHandler)
         """Stores the query parameters of the callback and shows a message."""
         parsed = urlparse(self.path)
+
         if parsed.path != urlparse(SPOTIFY_REDIRECT_URI).path:
             self.send_error(404)
 
             return
 
         server = cast(CallbackServer, self.server)
+
         server.callback_params = {
             key: values[0] for key, values in parse_qs(parsed.query).items()
         }
@@ -42,10 +49,18 @@ class CallbackHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.end_headers()
+
         self.wfile.write(
             b"<html><body><p>Login complete. You can close this tab.</p></body></html>"
         )
 
-    def log_message(self, format: str, *args) -> None:
-        """Silences the default request logging."""
+    def log_message(self, format: str, *args: object) -> None:
+        """Silences the default request logging.
+
+        Args:
+            format (str): The format string of the request log, which is not
+                used.
+            *args: The values for the format string, which are not used.
+        """
+
         return

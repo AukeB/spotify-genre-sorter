@@ -1,11 +1,11 @@
 """Module for loading the configuration files."""
 
-import yaml
-
 from pathlib import Path
 
-from sgs.constants import CONFIG_PATH
+import yaml
+
 from sgs.config.config_model import ConfigModel
+from sgs.constants import CONFIG_PATH
 
 
 class ConfigManager:
@@ -16,6 +16,11 @@ class ConfigManager:
 
     Attributes:
         config_path (Path): Path to the YAML configuration file to load.
+
+    Example:
+        >>> config = ConfigManager().load_config_file()
+        >>> config.sources.liked_songs
+        True
     """
 
     def __init__(self, config_path: Path = CONFIG_PATH) -> None:
@@ -24,6 +29,7 @@ class ConfigManager:
         Args:
             config_path (Path): Path to the YAML configuration file to load.
         """
+
         self.config_path = config_path
 
     def load_config_file(self) -> ConfigModel:
@@ -36,6 +42,7 @@ class ConfigManager:
         Returns:
             config_model (ConfigModel): The validated configuration object.
         """
+
         with open(self.config_path) as file:
             config = yaml.safe_load(file)
 

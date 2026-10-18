@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 # --- Relative file paths within repository ---
 
 
@@ -22,6 +21,7 @@ SPOTIFY_ME_TRACKS_URL = f"{SPOTIFY_API_BASE_URL}/me/tracks"
 SPOTIFY_ME_ALBUMS_URL = f"{SPOTIFY_API_BASE_URL}/me/albums"
 SPOTIFY_ME_TOP_TRACKS_URL = f"{SPOTIFY_API_BASE_URL}/me/top/tracks"
 SPOTIFY_REDIRECT_URI = "http://127.0.0.1:5000/callback"
+
 SPOTIFY_SCOPES = [
     "playlist-read-private",
     "playlist-read-collaborative",

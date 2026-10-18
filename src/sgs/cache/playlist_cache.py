@@ -4,17 +4,16 @@ import logging
 import sqlite3
 from collections.abc import Iterable
 
+from sgs.api.spotify_api import get_all_pages, is_readable_playlist
 from sgs.cache.source_links import SourceLinks
 from sgs.cache.sync_stats import SyncStats
-from sgs.utils.time_utils import utc_now
 from sgs.cache.track_store import TrackStore
 from sgs.constants import (
     PLAYLIST_SOURCE_NAME,
     SPOTIFY_API_BASE_URL,
     SPOTIFY_ME_PLAYLISTS_URL,
 )
-
-from sgs.api.spotify_api import get_all_pages, is_readable_playlist
+from sgs.utils.time_utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ def _filter_playable_tracks(entries: Iterable[dict]) -> list[dict]:
     Returns:
         tracks (list[dict]): The track objects, in playlist order.
     """
+
     tracks = []
 
     for entry in entries:
@@ -77,6 +77,7 @@ class PlaylistCache:
             track_store (TrackStore): Saves each song the playlists contain.
             source_links (SourceLinks): Keeps the playlists source up to date.
         """
+
         self._connection = connection
         self._stats = stats
         self._track_store = track_store
@@ -92,6 +93,7 @@ class PlaylistCache:
             snapshot_id (str | None): The stored snapshot, or None if the
                 playlist has not been cached yet.
         """
+
         row = self._connection.execute(
             "SELECT snapshot_id FROM playlists WHERE playlist_id = ?",
             (playlist_id,),
@@ -110,6 +112,7 @@ class PlaylistCache:
         Returns:
             count (int): The number of songs stored for the playlist.
         """
+
         row = self._connection.execute(
             "SELECT COUNT(*) FROM playlist_songs WHERE playlist_id = ?",
             (playlist_id,),
@@ -126,6 +129,7 @@ class PlaylistCache:
             playlist (dict): The playlist object from Spotify.
             tracks (list[dict]): The playable track objects, in playlist order.
         """
+
         synced_at = utc_now()
 
         if self._read_snapshot_id(playlist["id"]) is None:
@@ -133,7 +137,8 @@ class PlaylistCache:
         else:
             self._stats.count_changed("playlists")
 
-        self._stats.count_added("playlist_songs", len(tracks))
+        track_count = len(tracks)
+        self._stats.count_added("playlist_songs", track_count)
 
         with self._connection:
             self._connection.execute(
@@ -177,10 +182,12 @@ class PlaylistCache:
             refresh (bool): If True, read the playlist even when its snapshot is
                 unchanged.
         """
+
         stored_snapshot_id = self._read_snapshot_id(playlist["id"])
 
         if not refresh and stored_snapshot_id == playlist["snapshot_id"]:
             cached_count = self._count_cached_songs(playlist["id"])
+
             logger.info(
                 "Playlist unchanged, skipping: %s (%d cached songs)",
                 playlist["name"],
@@ -196,7 +203,8 @@ class PlaylistCache:
         tracks = _filter_playable_tracks(entries)
         self._replace_playlist(playlist, tracks)
 
-        logger.info("Synced playlist %s: %d songs", playlist["name"], len(tracks))
+        track_count = len(tracks)
+        logger.info("Synced playlist %s: %d songs", playlist["name"], track_count)
 
     def _remove_unreadable(self, readable_ids: list[str]) -> None:
         """Deletes cached playlists that are no longer readable or were removed.
@@ -205,6 +213,7 @@ class PlaylistCache:
             readable_ids (list[str]): IDs of the playlists that should stay
                 cached.
         """
+
         marks = ["?"] * len(readable_ids)
         placeholders = ", ".join(marks)
 
@@ -234,6 +243,7 @@ class PlaylistCache:
             include_collaborative (bool): Whether collaborative playlists owned
                 by other users should be read.
         """
+
         pages = get_all_pages(SPOTIFY_ME_PLAYLISTS_URL, access_token)
         all_playlists = list(pages)
 
@@ -243,10 +253,13 @@ class PlaylistCache:
             if is_readable_playlist(playlist, user_id, include_collaborative):
                 readable.append(playlist)
 
+        playlist_count = len(all_playlists)
+        readable_count = len(readable)
+
         logger.info(
             "Found %d playlists, %d readable",
-            len(all_playlists),
-            len(readable),
+            playlist_count,
+            readable_count,
         )
 
         for playlist in readable:
@@ -254,6 +267,7 @@ class PlaylistCache:
 
         readable_ids = [playlist["id"] for playlist in readable]
         self._remove_unreadable(readable_ids)
+
         self._source_links.rebuild(
             PLAYLIST_SOURCE_NAME,
             "SELECT song_id FROM playlist_songs",

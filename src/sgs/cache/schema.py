@@ -110,5 +110,6 @@ def create_schema(connection: sqlite3.Connection) -> None:
     Args:
         connection (sqlite3.Connection): Open connection to the cache file.
     """
+
     connection.execute("PRAGMA foreign_keys = ON")
     connection.executescript(SCHEMA)

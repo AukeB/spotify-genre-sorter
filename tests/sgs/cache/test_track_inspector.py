@@ -17,7 +17,13 @@ from sgs.cache.track_store import TrackStore
 
 
 def _track(track_id, uri=None):
-    """Builds a track object with one artist and one album."""
+    """Builds a track object with one artist and one album.
+
+    Args:
+        track_id (str): The Spotify track ID.
+        uri (str): The Spotify URI of the track.
+    """
+
     track = {
         "id": track_id,
         "name": "Trade It All",
@@ -30,10 +36,20 @@ def _track(track_id, uri=None):
 
 
 def _populated_db(path: Path, track_id: str = "t1") -> None:
-    """Writes a cache file with one track, its artist, a playlist entry, and a liked entry."""
+    """Writes a cache file with one track, its artist, a playlist entry, and a liked entry.
+
+    Args:
+        path (Path): Where to write the cache file.
+        track_id (str): The ID of the track to store.
+    """
+
     connection = sqlite3.connect(path)
     create_schema(connection)
-    TrackStore(connection, SyncStats()).store_track(_track(track_id))
+    stats = SyncStats()
+    store = TrackStore(connection, stats)
+    track = _track(track_id)
+    store.store_track(track)
+
     connection.execute(
         "INSERT INTO playlists (playlist_id, name, owner_id, collaborative, snapshot_id, synced_at) "
         "VALUES ('p1', 'Chill', 'me', 0, 'snap', '2026-01-01T00:00:00+00:00')"
@@ -74,24 +90,28 @@ def test_parse_track_id_accepts_link_with_query_and_locale():
 
 def test_parse_track_id_rejects_non_track_link():
     """A link to something other than a track is rejected."""
+
     with pytest.raises(ValueError):
         parse_track_id(None, "https://open.spotify.com/album/4F2Q")
 
 
 def test_parse_track_id_rejects_track_link_without_id():
     """A track link with no ID after the word track is rejected."""
+
     with pytest.raises(ValueError):
         parse_track_id(None, "https://open.spotify.com/track")
 
 
 def test_parse_track_id_rejects_both_options():
     """Giving both --track-id and --track-link is rejected."""
+
     with pytest.raises(ValueError):
         parse_track_id("4F2Q", "spotify:track:4F2Q")
 
 
 def test_parse_track_id_rejects_no_option():
     """Giving neither option is rejected."""
+
     with pytest.raises(ValueError):
         parse_track_id(None, None)
 
@@ -162,7 +182,10 @@ def test_build_track_report_marks_empty_fields(tmp_path):
     path = tmp_path / "cache.db"
     connection = sqlite3.connect(path)
     create_schema(connection)
-    TrackStore(connection, SyncStats()).store_track(_track("t2", uri=""))
+    stats = SyncStats()
+    store = TrackStore(connection, stats)
+    track = _track("t2", uri="")
+    store.store_track(track)
     connection.commit()
     connection.close()
     connection = open_read_only(path)
@@ -193,7 +216,11 @@ def test_build_track_report_shows_every_stored_optional_section(tmp_path):
     path = tmp_path / "cache.db"
     connection = sqlite3.connect(path)
     create_schema(connection)
-    TrackStore(connection, SyncStats()).store_track(_track("t1"))
+    stats = SyncStats()
+    store = TrackStore(connection, stats)
+    track = _track("t1")
+    store.store_track(track)
+
     connection.execute(
         "INSERT INTO artist_genre_responses (artist_id, source, fetched_at, status, payload) "
         "VALUES ('ar1', 'musicbrainz', '2026-01-01T00:00:00+00:00', 'found', '{\"artist\": {}}')"
@@ -206,12 +233,14 @@ def test_build_track_report_shows_every_stored_optional_section(tmp_path):
 
     connection.execute("INSERT INTO genres (genre_name) VALUES ('jazz')")
     connection.execute("INSERT INTO artist_genres (artist_id, genre_name) VALUES ('ar1', 'jazz')")
+
     connection.execute(
         "INSERT INTO library_items (source_name, item_id, added_at) "
         "VALUES ('saved_albums', 'al1', '2026-03-01T00:00:00+00:00')"
     )
 
     connection.execute("INSERT INTO album_songs (album_id, position, song_id) VALUES ('al1', 0, 't1')")
+
     connection.execute(
         "INSERT INTO top_track_rankings (time_range, position, song_id, fetched_at) "
         "VALUES ('medium_term', 0, 't1', '2026-04-01T00:00:00+00:00')"

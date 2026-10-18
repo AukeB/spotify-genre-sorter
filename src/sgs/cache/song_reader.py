@@ -20,6 +20,7 @@ def read_songs_for_source(
         songs (list[Song]): The songs from that source, with their artist IDs in
             credit order.
     """
+
     song_rows = connection.execute(
         "SELECT songs.song_id, songs.name, songs.uri FROM songs "
         "JOIN song_sources ON song_sources.song_id = songs.song_id "
@@ -41,6 +42,7 @@ def read_songs_for_source(
 
     for song_id, name, uri in song_rows:
         artist_ids = artist_ids_by_song.get(song_id, [])
+
         song = Song(
             id=song_id,
             name=name,

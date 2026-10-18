@@ -11,6 +11,7 @@ from sgs.spotify_cache import SpotifyCache
 
 def test_init_creates_all_tables(cache_path):
     """Opening the cache creates every table in the schema."""
+
     with SpotifyCache():
         pass
 
@@ -19,6 +20,7 @@ def test_init_creates_all_tables(cache_path):
     connection.close()
 
     table_names = {row[0] for row in rows}
+
     assert table_names >= {
         "songs",
         "artists",
@@ -39,6 +41,7 @@ def test_init_creates_all_tables(cache_path):
 
 def test_get_songs_for_source_returns_only_requested_source(cache_path):
     """Songs from other sources are not returned."""
+
     with SpotifyCache() as cache:
         cache._connection.execute(
             "INSERT INTO songs (song_id, name, uri) VALUES ('t1', 'Song', 'uri')"

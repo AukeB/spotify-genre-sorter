@@ -13,6 +13,7 @@ from sgs.config.config_manager import ConfigManager
 @pytest.fixture(scope="function", name="mock_yaml_content")
 def mock_yaml_config():
     """Fixture that defines a mock config content"""
+
     yaml_content = """
         sources:
             liked_songs: true
@@ -33,7 +34,8 @@ def test_load_conig_file(mock_yaml_content):
     m_open = mock_open(read_data=mock_yaml_content)
 
     with patch("sgs.config.config_manager.open", m_open):
-        config_manager = ConfigManager(Path("mock_config_path.yaml"))
+        config_path = Path("mock_config_path.yaml")
+        config_manager = ConfigManager(config_path)
         config = config_manager.load_config_file()
 
     return config
@@ -55,10 +57,18 @@ CACHE_SPOTIFY_MODULES = [
 
 
 def _serve_pages(responses):
-    """Returns a stand-in for get_all_pages that serves items keyed by URL."""
+    """Returns a stand-in for get_all_pages that serves items keyed by URL.
+
+    Args:
+        responses (dict[str, list]): The items to serve, keyed by URL.
+
+    Returns:
+        fake (Callable): A function with the same signature as get_all_pages.
+    """
 
     def fake(url, access_token, params=None, description=None):
-        items = list(responses.get(url, []))
+        url_items = responses.get(url, [])
+        items = list(url_items)
 
         return items
 
@@ -66,10 +76,18 @@ def _serve_pages(responses):
 
 
 def _serve_total(responses):
-    """Returns a stand-in for fetch_total that counts the items served for a URL."""
+    """Returns a stand-in for fetch_total that counts the items served for a URL.
+
+    Args:
+        responses (dict[str, list]): The items served, keyed by URL.
+
+    Returns:
+        fake (Callable): A function with the same signature as fetch_total.
+    """
 
     def fake(url, access_token):
-        total = len(responses.get(url, []))
+        url_items = responses.get(url, [])
+        total = len(url_items)
 
         return total
 
@@ -85,8 +103,10 @@ def fixture_spotify_calls(monkeypatch):
     """
 
     def install(responses):
-        pages = MagicMock(side_effect=_serve_pages(responses))
-        total = MagicMock(side_effect=_serve_total(responses))
+        page_server = _serve_pages(responses)
+        total_server = _serve_total(responses)
+        pages = MagicMock(side_effect=page_server)
+        total = MagicMock(side_effect=total_server)
 
         for module in CACHE_SPOTIFY_MODULES:
             monkeypatch.setattr(f"{module}.get_all_pages", pages)

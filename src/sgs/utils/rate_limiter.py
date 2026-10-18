@@ -19,6 +19,7 @@ class RateLimiter:
             min_interval (float): Smallest number of seconds between two
                 requests.
         """
+
         self._min_interval = min_interval
         self._last_request_at = float("-inf")
 

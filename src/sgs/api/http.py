@@ -15,7 +15,6 @@ from sgs.constants import (
     RATE_LIMIT_MAX_DELAY_SECONDS,
     RETRYABLE_ERROR_CODES,
 )
-
 from sgs.errors import RetryableApiError
 from sgs.utils.retry import retry
 
@@ -38,6 +37,7 @@ def _retry_after_seconds(response: requests.Response) -> float | None:
         retry_after (float | None): Seconds to wait, or None if the header is
             missing or is not a number of seconds.
     """
+
     header = response.headers.get("Retry-After")
     retry_after: float | None = None
 
@@ -69,6 +69,7 @@ def get(
     Raises:
         RetryableApiError: If the response has status 429.
     """
+
     response = requests.get(url, headers=headers, params=params, timeout=10)
 
     if response.status_code in RETRYABLE_ERROR_CODES:

@@ -10,10 +10,10 @@ import json
 import logging
 import sqlite3
 
-from sgs.cache.sync_stats import SyncStats
-from sgs.utils.time_utils import utc_now
 from sgs.api.lastfm_api import fetch_lastfm_top_tags
 from sgs.api.musicbrainz_api import fetch_musicbrainz_artist
+from sgs.cache.sync_stats import SyncStats
+from sgs.utils.time_utils import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ class GenreResponseCache:
             connection (sqlite3.Connection): Open connection to the cache file.
             stats (SyncStats): Receives the counts of rows added.
         """
+
         self._connection = connection
         self._stats = stats
 
@@ -49,6 +50,7 @@ class GenreResponseCache:
             artists (list[tuple[str, str]]): The Spotify artist ID and name of
                 each pending artist.
         """
+
         rows = self._connection.execute(
             "SELECT artist_id, name FROM artists "
             "WHERE artist_id NOT IN "
@@ -74,14 +76,18 @@ class GenreResponseCache:
             pending (list[tuple[str, str]]): The artists that still need a
                 request.
         """
+
         total_row = self._connection.execute("SELECT COUNT(*) FROM artists").fetchone()
         total = total_row[0]
         already_stored = total - len(pending)
+
+        pending_count = len(pending)
+
         logger.info(
             "%s: %d artists already stored, skipping them. %d to request",
             source_label,
             already_stored,
-            len(pending),
+            pending_count,
         )
 
     def _store(self, artist_id: str, source: str, result: dict) -> None:
@@ -93,13 +99,16 @@ class GenreResponseCache:
             result (dict): The status and raw payload returned by the source
                 client.
         """
+
         payload = json.dumps(result["payload"])
+
+        fetched_at = utc_now()
 
         with self._connection:
             self._connection.execute(
                 "INSERT INTO artist_genre_responses (artist_id, source, fetched_at, status, payload) "
                 "VALUES (?, ?, ?, ?, ?)",
-                (artist_id, source, utc_now(), result["status"], payload),
+                (artist_id, source, fetched_at, result["status"], payload),
             )
 
         self._stats.count_added("artist_genre_responses")
@@ -108,6 +117,7 @@ class GenreResponseCache:
         """Requests MusicBrainz for every artist that has no MusicBrainz
         response yet.
         """
+
         pending = self._pending_artists(MUSICBRAINZ_SOURCE)
         matched = 0
         self._log_start("MusicBrainz", MUSICBRAINZ_SOURCE, pending)
@@ -119,16 +129,20 @@ class GenreResponseCache:
             if result["status"] == "found":
                 matched += 1
 
+            pending_count = len(pending)
+
             logger.info(
                 "MusicBrainz %d/%d: %s -> %s",
                 index,
-                len(pending),
+                pending_count,
                 name,
                 result["status"],
             )
 
+        pending_count = len(pending)
+
         logger.info(
-            "MusicBrainz: %d artists requested, %d matched", len(pending), matched
+            "MusicBrainz: %d artists requested, %d matched", pending_count, matched
         )
 
     def _sync_lastfm(self, api_key: str) -> None:
@@ -137,6 +151,7 @@ class GenreResponseCache:
         Args:
             api_key (str): A Last.fm API key.
         """
+
         pending = self._pending_artists(LASTFM_SOURCE)
         self._log_start("Last.fm", LASTFM_SOURCE, pending)
 
@@ -144,11 +159,14 @@ class GenreResponseCache:
             result = fetch_lastfm_top_tags(name, api_key)
             self._store(artist_id, LASTFM_SOURCE, result)
 
+            pending_count = len(pending)
+
             logger.info(
-                "Last.fm %d/%d: %s -> %s", index, len(pending), name, result["status"]
+                "Last.fm %d/%d: %s -> %s", index, pending_count, name, result["status"]
             )
 
-        logger.info("Last.fm: %d artists requested", len(pending))
+        pending_count = len(pending)
+        logger.info("Last.fm: %d artists requested", pending_count)
 
     def sync(self, lastfm_api_key: str | None) -> None:
         """Requests both sources for the artists that are still missing a
@@ -160,10 +178,12 @@ class GenreResponseCache:
             lastfm_api_key (str | None): A Last.fm API key, or None to skip
                 Last.fm.
         """
+
         self._sync_musicbrainz()
 
         if lastfm_api_key is None:
             logger.info("No Last.fm API key given, skipping Last.fm")
+
             return
 
         self._sync_lastfm(lastfm_api_key)

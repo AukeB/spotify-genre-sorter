@@ -3,6 +3,7 @@
 import logging
 import time
 
+from sgs.api.spotify_api import fetch_current_user
 from sgs.config.config_model import ConfigModel
 from sgs.constants import (
     LIKED_SOURCE_NAME,
@@ -10,9 +11,7 @@ from sgs.constants import (
     SAVED_ALBUMS_SOURCE_NAME,
     TOP_TRACKS_SOURCE_NAME,
 )
-
 from sgs.models import Song
-from sgs.api.spotify_api import fetch_current_user
 from sgs.spotify_cache import SpotifyCache
 
 logger = logging.getLogger(__name__)
@@ -47,6 +46,7 @@ class SongSources:
             refresh_spotify (bool): If True, read every Spotify source again,
                 including items already cached.
         """
+
         self._access_token = access_token
         self._refresh_spotify = refresh_spotify
         self._liked_songs_enabled = config.sources.liked_songs
@@ -54,6 +54,7 @@ class SongSources:
         self._top_tracks_enabled = config.sources.top_tracks
         self._your_playlists_enabled = config.sources.your_playlists
         self._top_tracks_time_range = config.options.top_tracks_time_range
+
         self._include_collaborative_playlists = (
             config.options.include_collaborative_playlists
         )
@@ -66,6 +67,7 @@ class SongSources:
         Returns:
             songs (list[Song]): The liked songs.
         """
+
         with SpotifyCache() as cache:
             cache.sync_liked_songs(self._access_token, self._refresh_spotify)
 
@@ -83,6 +85,7 @@ class SongSources:
         Returns:
             songs (list[Song]): The tracks from all saved albums.
         """
+
         with SpotifyCache() as cache:
             cache.sync_saved_albums(self._access_token, self._refresh_spotify)
 
@@ -99,6 +102,7 @@ class SongSources:
         Returns:
             songs (list[Song]): The top tracks.
         """
+
         with SpotifyCache() as cache:
             cache.sync_top_tracks(
                 self._access_token,
@@ -120,6 +124,7 @@ class SongSources:
         Returns:
             songs (list[Song]): The tracks from the readable playlists.
         """
+
         user_id = fetch_current_user(self._access_token)["id"]
 
         with SpotifyCache() as cache:
@@ -144,6 +149,7 @@ class SongSources:
         Returns:
             all_songs (list[Song]): The unique songs from all enabled sources.
         """
+
         enabled_fetchers = [
             (self._liked_songs_enabled, self._fetch_liked_songs),
             (self._saved_albums_enabled, self._fetch_saved_albums),
@@ -162,10 +168,14 @@ class SongSources:
             start = time.perf_counter()
             songs = fetch()
             elapsed = time.perf_counter() - start
+
+            song_count = len(songs)
+            source_name = fetch.__name__
+
             logger.info(
                 "Read %d songs from %s in %.2f s",
-                len(songs),
-                fetch.__name__,
+                song_count,
+                source_name,
                 elapsed,
             )
 
@@ -177,7 +187,8 @@ class SongSources:
                 else:
                     existing.sources |= song.sources
 
-        all_songs = list(songs_by_id.values())
+        song_values = songs_by_id.values()
+        all_songs = list(song_values)
 
         total_elapsed = time.perf_counter() - total_start
         logger.info("Total song collection took %.2f s", total_elapsed)

@@ -8,11 +8,10 @@ parsed later.
 
 from sgs.api.http import get, retry_api_error
 from sgs.constants import (
+    APP_USER_AGENT,
     MUSICBRAINZ_MIN_INTERVAL_SECONDS,
     MUSICBRAINZ_URL,
-    APP_USER_AGENT,
 )
-
 from sgs.utils.rate_limiter import RateLimiter
 
 _limiter = RateLimiter(MUSICBRAINZ_MIN_INTERVAL_SECONDS)
@@ -28,6 +27,7 @@ def _find_linked_artist_id(url_lookup: dict) -> str | None:
         musicbrainz_id (str | None): The linked artist ID, or None if there is
             none.
     """
+
     musicbrainz_id = None
 
     for relation in url_lookup.get("relations", []):
@@ -53,10 +53,12 @@ def fetch_musicbrainz_artist(spotify_artist_id: str) -> dict:
         requests.HTTPError: If MusicBrainz returns an error other than 404 for
             the URL lookup, or any error for the artist request.
     """
+
     headers = {"User-Agent": APP_USER_AGENT}
     spotify_url = f"https://open.spotify.com/artist/{spotify_artist_id}"
 
     _limiter.wait()
+
     url_response = get(
         f"{MUSICBRAINZ_URL}/url",
         params={"resource": spotify_url, "inc": "artist-rels", "fmt": "json"},
@@ -84,6 +86,7 @@ def fetch_musicbrainz_artist(spotify_artist_id: str) -> dict:
         return result
 
     _limiter.wait()
+
     artist_response = get(
         f"{MUSICBRAINZ_URL}/artist/{musicbrainz_id}",
         params={"inc": "genres+tags", "fmt": "json"},
@@ -92,6 +95,7 @@ def fetch_musicbrainz_artist(spotify_artist_id: str) -> dict:
 
     artist_response.raise_for_status()
     artist = artist_response.json()
+
     result = {
         "status": "found",
         "payload": {"url_lookup": url_lookup, "artist": artist},

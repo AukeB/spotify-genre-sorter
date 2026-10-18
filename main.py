@@ -11,7 +11,6 @@ from sgs.cache.track_inspector import (
     open_read_only,
     parse_track_id,
 )
-
 from sgs.config.config_manager import ConfigManager
 from sgs.constants import CACHE_DB_PATH
 from sgs.song_sources import SongSources
@@ -22,6 +21,15 @@ logger = logging.getLogger(__name__)
 app = typer.Typer(
     help="Group your Spotify songs into genre playlists, and inspect the cache.",
 )
+
+
+@app.callback()
+def configure_logging() -> None:
+    """Set up logging for every command."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)-5s %(name)-20s: %(message)s",
+    )
 
 
 @app.command("run")
@@ -52,6 +60,7 @@ def run(
     4. Collect the songs from the enabled sources.
     5. Request genre data from MusicBrainz, and from Last.fm when a key is given.
     """
+
     authenticator = SpotifyAuthenticator(client_id=spotify_client_id)
     access_token = authenticator.get_valid_token()
     user = fetch_current_user(access_token)
@@ -86,6 +95,7 @@ def track(
     Give either --track-id or --track-link. The report is read-only and does not
     call Spotify.
     """
+
     try:
         spotify_id = parse_track_id(track_id, track_link)
     except ValueError as error:
@@ -107,5 +117,4 @@ def track(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(levelname)-5s %(name)-20s: %(message)s")
     app()

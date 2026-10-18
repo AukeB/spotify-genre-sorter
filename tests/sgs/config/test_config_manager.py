@@ -29,7 +29,10 @@ def test_load_config_file(mock_config):
 
 def test_load_config_file_rejects_unknown_time_range(mock_yaml_content):
     """A time range outside the allowed values fails validation."""
-    m_open = mock_open(read_data=mock_yaml_content.replace("long_term", "forever"))
+    yaml_text = mock_yaml_content.replace("long_term", "forever")
+    m_open = mock_open(read_data=yaml_text)
 
     with patch("sgs.config.config_manager.open", m_open), pytest.raises(ValidationError):
-        ConfigManager(Path("mock_config_path.yaml")).load_config_file()
+        config_path = Path("mock_config_path.yaml")
+        config_manager = ConfigManager(config_path)
+        config_manager.load_config_file()

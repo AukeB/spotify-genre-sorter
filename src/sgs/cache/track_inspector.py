@@ -14,6 +14,35 @@ from sgs.cache.genre_response_cache import LASTFM_SOURCE, MUSICBRAINZ_SOURCE
 from sgs.constants import LIKED_SOURCE_NAME, SAVED_ALBUMS_SOURCE_NAME
 
 
+def _id_from_link(link: str) -> str:
+    """Returns the track ID from a spotify:track URI or an open.spotify.com
+    link.
+
+    Args:
+        link (str): The URI or link.
+
+    Returns:
+        spotify_id (str): The track ID.
+
+    Raises:
+        ValueError: If the link does not point to a track.
+    """
+
+    if link.startswith("spotify:track:"):
+        spotify_id = link.split(":")[-1]
+
+        return spotify_id
+
+    parts = [part for part in urlparse(link).path.split("/") if part]
+
+    if "track" not in parts or parts.index("track") + 1 >= len(parts):
+        raise ValueError(f"Not a Spotify track link: {link}")
+
+    spotify_id = parts[parts.index("track") + 1]
+
+    return spotify_id
+
+
 def parse_track_id(track_id: str | None, track_link: str | None) -> str:
     """Returns the Spotify track ID from either a bare ID or a link.
 
@@ -29,6 +58,7 @@ def parse_track_id(track_id: str | None, track_link: str | None) -> str:
         ValueError: If neither or both of the inputs are given, or the link is
             not a track link.
     """
+
     if track_link is None:
         if track_id is None:
             raise ValueError("Give either --track-id or --track-link.")
@@ -45,34 +75,6 @@ def parse_track_id(track_id: str | None, track_link: str | None) -> str:
     return spotify_id
 
 
-def _id_from_link(link: str) -> str:
-    """Returns the track ID from a spotify:track URI or an open.spotify.com
-    link.
-
-    Args:
-        link (str): The URI or link.
-
-    Returns:
-        spotify_id (str): The track ID.
-
-    Raises:
-        ValueError: If the link does not point to a track.
-    """
-    if link.startswith("spotify:track:"):
-        spotify_id = link.split(":")[-1]
-
-        return spotify_id
-
-    parts = [part for part in urlparse(link).path.split("/") if part]
-
-    if "track" not in parts or parts.index("track") + 1 >= len(parts):
-        raise ValueError(f"Not a Spotify track link: {link}")
-
-    spotify_id = parts[parts.index("track") + 1]
-
-    return spotify_id
-
-
 def open_read_only(db_path: Path) -> sqlite3.Connection:
     """Opens an existing cache database without allowing writes.
 
@@ -85,6 +87,7 @@ def open_read_only(db_path: Path) -> sqlite3.Connection:
     Raises:
         FileNotFoundError: If the cache file does not exist yet.
     """
+
     if not db_path.exists():
         raise FileNotFoundError(
             f"No cache database at {db_path}. Run the 'run' command first."
@@ -108,6 +111,7 @@ def _rows(
     Returns:
         rows (list[dict[str, object]]): One dictionary per row.
     """
+
     cursor = connection.execute(sql, params)
     columns = [column[0] for column in cursor.description]
     fetched = cursor.fetchall()
@@ -134,6 +138,7 @@ def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
     Returns:
         exists (bool): True if the table is in the database.
     """
+
     rows = _rows(
         connection,
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
@@ -154,6 +159,7 @@ def _value(value: object) -> str:
     Returns:
         text (str): The value, or "(empty)" if there is none.
     """
+
     if value is None or value == "":
         return "(empty)"
 
@@ -173,11 +179,13 @@ def _fields(row: dict[str, object], keys: list[str], indent: str = "  ") -> list
     Returns:
         lines (list[str]): One line per field.
     """
+
     lines = []
 
     for key in keys:
         value = row.get(key)
-        lines.append(f"{indent}{key}: {_value(value)}")
+        value_text = _value(value)
+        lines.append(f"{indent}{key}: {value_text}")
 
     return lines
 
@@ -193,6 +201,7 @@ def _payload_lines(payload: object, include_raw: bool, indent: str) -> list[str]
     Returns:
         lines (list[str]): The lines describing the payload.
     """
+
     text = str(payload)
 
     if not include_raw:
@@ -202,7 +211,8 @@ def _payload_lines(payload: object, include_raw: bool, indent: str) -> list[str]
 
         return lines
 
-    pretty = json.dumps(json.loads(text), indent=2)
+    parsed = json.loads(text)
+    pretty = json.dumps(parsed, indent=2)
     body = pretty.splitlines()
     indented = [f"{indent}  {line}" for line in body]
     lines = [f"{indent}payload:", *indented]
@@ -232,6 +242,7 @@ def _raw_block(
     Returns:
         lines (list[str]): The lines describing the raw copy.
     """
+
     if not _table_exists(connection, table):
         lines = [
             f"{indent}raw copy: (table {table} does not exist yet, run the 'run' command once)"
@@ -277,6 +288,7 @@ def _genre_response_block(
     Returns:
         lines (list[str]): The lines describing the response.
     """
+
     rows = _rows(
         connection,
         "SELECT source, fetched_at, status, payload FROM artist_genre_responses "
@@ -292,8 +304,11 @@ def _genre_response_block(
         return lines
 
     row = rows[0]
-    lines.extend(_fields(row, ["source", "fetched_at", "status"], indent + "  "))
-    lines.extend(_payload_lines(row["payload"], include_raw, indent + "  "))
+    child_indent = indent + "  "
+    status_lines = _fields(row, ["source", "fetched_at", "status"], child_indent)
+    lines.extend(status_lines)
+    payload_lines = _payload_lines(row["payload"], include_raw, child_indent)
+    lines.extend(payload_lines)
 
     return lines
 
@@ -307,6 +322,7 @@ def _heading(title: str) -> list[str]:
     Returns:
         lines (list[str]): The blank line and the title.
     """
+
     lines = ["", title]
 
     return lines
@@ -325,12 +341,16 @@ def _song_section(
     Returns:
         lines (list[str]): The lines for the song section.
     """
+
     lines = _heading("Song (songs)")
-    lines.extend(_fields(song, ["song_id", "name", "uri"]))
+    song_fields = _fields(song, ["song_id", "name", "uri"])
+    lines.extend(song_fields)
     song_id = str(song["song_id"])
+
     raw_lines = _raw_block(
         connection, "raw_tracks", "song_id", song_id, include_raw, "  "
     )
+
     lines.extend(raw_lines)
 
     return lines
@@ -349,6 +369,7 @@ def _artist_section(
     Returns:
         lines (list[str]): The lines for the artist section.
     """
+
     rows = _rows(
         connection,
         "SELECT a.artist_id, a.name, sa.position FROM song_artists sa "
@@ -365,17 +386,22 @@ def _artist_section(
 
     for row in rows:
         artist_id = str(row["artist_id"])
-        lines.append(f"  Artist {_value(row['position'])}:")
-        lines.extend(_fields(row, ["artist_id", "name", "position"], "    "))
+        position_text = _value(row["position"])
+        lines.append(f"  Artist {position_text}:")
+        artist_fields = _fields(row, ["artist_id", "name", "position"], "    ")
+        lines.extend(artist_fields)
+
         raw_lines = _raw_block(
             connection, "raw_artists", "artist_id", artist_id, include_raw, "    "
         )
+
         lines.extend(raw_lines)
 
         for source in (MUSICBRAINZ_SOURCE, LASTFM_SOURCE):
             response_lines = _genre_response_block(
                 connection, artist_id, source, include_raw, "    "
             )
+
             lines.extend(response_lines)
 
         genre_rows = _rows(
@@ -391,7 +417,8 @@ def _artist_section(
             lines.append("      (none stored, parsing comes later)")
 
         for genre_row in genre_rows:
-            lines.append(f"      {_value(genre_row['genre_name'])}")
+            genre_name_text = _value(genre_row["genre_name"])
+            lines.append(f"      {genre_name_text}")
 
     return lines
 
@@ -409,6 +436,7 @@ def _album_section(
     Returns:
         lines (list[str]): The lines for the album section.
     """
+
     rows = _rows(
         connection,
         "SELECT album_id, position FROM album_songs WHERE song_id = ? ORDER BY album_id",
@@ -425,12 +453,15 @@ def _album_section(
     for row in rows:
         album_id = str(row["album_id"])
         lines.append(f"  Album {album_id}:")
-        lines.extend(_fields(row, ["album_id", "position"], "    "))
-        lines.extend(
-            _raw_block(
-                connection, "raw_albums", "album_id", album_id, include_raw, "    "
-            )
+        album_fields = _fields(row, ["album_id", "position"], "    ")
+        lines.extend(album_fields)
+
+        raw_album_lines = _raw_block(
+            connection, "raw_albums", "album_id", album_id, include_raw, "    "
         )
+
+        lines.extend(raw_album_lines)
+
         saved_rows = _rows(
             connection,
             "SELECT source_name, item_id, added_at FROM library_items WHERE source_name = ? AND item_id = ?",
@@ -443,9 +474,11 @@ def _album_section(
             continue
 
         lines.append("    saved album entry:")
-        lines.extend(
-            _fields(saved_rows[0], ["source_name", "item_id", "added_at"], "      ")
+
+        saved_fields = _fields(
+            saved_rows[0], ["source_name", "item_id", "added_at"], "      "
         )
+        lines.extend(saved_fields)
 
     return lines
 
@@ -460,6 +493,7 @@ def _playlist_section(connection: sqlite3.Connection, track_id: str) -> list[str
     Returns:
         lines (list[str]): The lines for the playlist section.
     """
+
     rows = _rows(
         connection,
         "SELECT p.playlist_id, p.name, p.owner_id, p.collaborative, p.snapshot_id, p.synced_at, "
@@ -478,7 +512,9 @@ def _playlist_section(connection: sqlite3.Connection, track_id: str) -> list[str
     for row in rows:
         collaborative = "yes" if row["collaborative"] == 1 else "no"
         row["collaborative"] = collaborative
-        lines.append(f"  Playlist {_value(row['name'])}:")
+        playlist_name = _value(row["name"])
+        lines.append(f"  Playlist {playlist_name}:")
+
         keys = [
             "playlist_id",
             "name",
@@ -488,7 +524,9 @@ def _playlist_section(connection: sqlite3.Connection, track_id: str) -> list[str
             "synced_at",
             "position",
         ]
-        lines.extend(_fields(row, keys, "    "))
+
+        key_fields = _fields(row, keys, "    ")
+        lines.extend(key_fields)
 
     return lines
 
@@ -503,6 +541,7 @@ def _library_section(connection: sqlite3.Connection, track_id: str) -> list[str]
     Returns:
         lines (list[str]): The lines for the liked-songs section.
     """
+
     rows = _rows(
         connection,
         "SELECT source_name, item_id, added_at FROM library_items WHERE source_name = ? AND item_id = ?",
@@ -516,7 +555,9 @@ def _library_section(connection: sqlite3.Connection, track_id: str) -> list[str]
 
         return lines
 
-    lines.extend(_fields(rows[0], ["source_name", "item_id", "added_at"]))
+    first_row = rows[0]
+    row_fields = _fields(first_row, ["source_name", "item_id", "added_at"])
+    lines.extend(row_fields)
 
     return lines
 
@@ -531,6 +572,7 @@ def _top_track_section(connection: sqlite3.Connection, track_id: str) -> list[st
     Returns:
         lines (list[str]): The lines for the top-tracks section.
     """
+
     rows = _rows(
         connection,
         "SELECT time_range, position, fetched_at FROM top_track_rankings WHERE song_id = ? "
@@ -546,8 +588,10 @@ def _top_track_section(connection: sqlite3.Connection, track_id: str) -> list[st
         return lines
 
     for row in rows:
-        lines.append(f"  Ranking {_value(row['time_range'])}:")
-        lines.extend(_fields(row, ["time_range", "position", "fetched_at"], "    "))
+        time_range_text = _value(row["time_range"])
+        lines.append(f"  Ranking {time_range_text}:")
+        ranking_fields = _fields(row, ["time_range", "position", "fetched_at"], "    ")
+        lines.extend(ranking_fields)
 
     return lines
 
@@ -562,6 +606,7 @@ def _source_section(connection: sqlite3.Connection, track_id: str) -> list[str]:
     Returns:
         lines (list[str]): The lines for the sources section.
     """
+
     rows = _rows(
         connection,
         "SELECT source_name FROM song_sources WHERE song_id = ? ORDER BY source_name",
@@ -576,7 +621,8 @@ def _source_section(connection: sqlite3.Connection, track_id: str) -> list[str]:
         return lines
 
     for row in rows:
-        lines.append(f"  {_value(row['source_name'])}")
+        source_name_text = _value(row["source_name"])
+        lines.append(f"  {source_name_text}")
 
     return lines
 
@@ -594,6 +640,7 @@ def build_track_report(
     Returns:
         report (str): The report, ready to print.
     """
+
     song_rows = _rows(
         connection,
         "SELECT song_id, name, uri FROM songs WHERE song_id = ?",
@@ -606,12 +653,18 @@ def build_track_report(
         return message
 
     lines = _song_section(connection, song_rows[0], include_raw)
-    lines.extend(_artist_section(connection, track_id, include_raw))
-    lines.extend(_album_section(connection, track_id, include_raw))
-    lines.extend(_playlist_section(connection, track_id))
-    lines.extend(_library_section(connection, track_id))
-    lines.extend(_top_track_section(connection, track_id))
-    lines.extend(_source_section(connection, track_id))
+    artist_lines = _artist_section(connection, track_id, include_raw)
+    lines.extend(artist_lines)
+    album_lines = _album_section(connection, track_id, include_raw)
+    lines.extend(album_lines)
+    playlist_lines = _playlist_section(connection, track_id)
+    lines.extend(playlist_lines)
+    library_lines = _library_section(connection, track_id)
+    lines.extend(library_lines)
+    top_track_lines = _top_track_section(connection, track_id)
+    lines.extend(top_track_lines)
+    source_lines = _source_section(connection, track_id)
+    lines.extend(source_lines)
 
     report = "\n".join(lines)
 

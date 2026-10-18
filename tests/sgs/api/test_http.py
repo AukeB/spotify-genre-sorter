@@ -9,7 +9,13 @@ from sgs.errors import RetryableApiError
 
 
 def _response(status_code, headers=None):
-    """Builds a fake requests.Response with the given status and headers."""
+    """Builds a fake requests.Response with the given status and headers.
+
+    Args:
+        status_code (int): The HTTP status code.
+        headers (dict[str, str] | None): The response headers.
+    """
+
     response = MagicMock()
     response.status_code = status_code
     response.headers = headers or {}

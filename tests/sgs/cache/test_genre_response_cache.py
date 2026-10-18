@@ -11,7 +11,13 @@ from sgs.spotify_cache import SpotifyCache
 
 
 def _add_artists(cache, artists):
-    """Inserts artists the way a source sync would, before genre responses are fetched."""
+    """Inserts artists the way a source sync would, before genre responses are fetched.
+
+    Args:
+        cache (SpotifyCache): The cache to insert the artists into.
+        artists (list[tuple[str, str]]): (artist_id, name) pairs to insert.
+    """
+
     for artist_id, name in artists:
         cache._connection.execute(
             "INSERT INTO artists (artist_id, name) VALUES (?, ?)",
@@ -22,7 +28,12 @@ def _add_artists(cache, artists):
 
 
 def _stored(cache):
-    """Returns every stored response as (artist_id, source, status, payload) tuples."""
+    """Returns every stored response as (artist_id, source, status, payload) tuples.
+
+    Args:
+        cache (SpotifyCache): The cache to read from.
+    """
+
     rows = cache._connection.execute(
         "SELECT artist_id, source, status, payload FROM artist_genre_responses ORDER BY artist_id, source"
     ).fetchall()
@@ -31,24 +42,44 @@ def _stored(cache):
 
 
 def _stub_sources(monkeypatch, musicbrainz=None, lastfm=None):
-    """Replaces both source clients with stand-ins and returns them."""
+    """Replaces both source clients with stand-ins and returns them.
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch): Pytest's patching helper.
+        musicbrainz (MagicMock): The stand-in for the MusicBrainz client.
+        lastfm (MagicMock): The stand-in for the Last.fm client.
+    """
+
     mb_mock = MagicMock(side_effect=musicbrainz)
     lastfm_mock = MagicMock(side_effect=lastfm)
     monkeypatch.setattr("sgs.cache.genre_response_cache.fetch_musicbrainz_artist", mb_mock)
     monkeypatch.setattr("sgs.cache.genre_response_cache.fetch_lastfm_top_tags", lastfm_mock)
 
-    return mb_mock, lastfm_mock
+    stubs = (mb_mock, lastfm_mock)
+
+    return stubs
 
 
 def _found(artist_id):
-    """A fake MusicBrainz result for an artist."""
+    """A fake MusicBrainz result for an artist.
+
+    Args:
+        artist_id (str): The MusicBrainz artist ID.
+    """
+
     result = {"status": "found", "payload": {"artist": {"id": artist_id, "genres": []}}}
 
     return result
 
 
 def _tags(name, api_key):
-    """A fake Last.fm result for an artist name."""
+    """A fake Last.fm result for an artist name.
+
+    Args:
+        name (str): The artist name.
+        api_key (str): The Last.fm API key.
+    """
+
     result = {"status": "found", "payload": {"toptags": {"tag": [], "@attr": {"artist": name}}}}
 
     return result
@@ -153,5 +184,7 @@ def test_sync_counts_only_found_artists_as_matched(cache_path, monkeypatch, capl
         rows = _stored(cache)
 
     assert [row[2] for row in rows] == ["not_matched"]
-    assert any("0 matched" in record.getMessage() for record in caplog.records)
+    messages = [record.getMessage() for record in caplog.records]
+
+    assert any("0 matched" in message for message in messages)
 

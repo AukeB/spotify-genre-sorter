@@ -20,7 +20,12 @@ from sgs.spotify_cache import SpotifyCache
 
 
 def _track(track_id):
-    """Builds a Spotify track object."""
+    """Builds a Spotify track object.
+
+    Args:
+        track_id (str): The Spotify track ID.
+    """
+
     track = {
         "id": track_id,
         "name": f"Song {track_id}",
@@ -33,21 +38,38 @@ def _track(track_id):
 
 
 def _saved(track_id, added_at):
-    """Builds a saved-track item as returned by the saved tracks endpoint."""
+    """Builds a saved-track item as returned by the saved tracks endpoint.
+
+    Args:
+        track_id (str): The Spotify track ID.
+        added_at (str): When the track was saved, as an ISO timestamp.
+    """
+
     item = {"added_at": added_at, "track": _track(track_id)}
 
     return item
 
 
 def _saved_album(album_id, added_at):
-    """Builds a saved-album item as returned by the saved albums endpoint."""
+    """Builds a saved-album item as returned by the saved albums endpoint.
+
+    Args:
+        album_id (str): The Spotify album ID.
+        added_at (str): When the album was saved, as an ISO timestamp.
+    """
+
     item = {"added_at": added_at, "album": {"id": album_id, "name": f"Album {album_id}"}}
 
     return item
 
 
 def _sync_liked(access_token="token"):
-    """Runs one liked-songs sync and returns the cached songs."""
+    """Runs one liked-songs sync and returns the cached songs.
+
+    Args:
+        access_token (str): The access token to sync with.
+    """
+
     with SpotifyCache() as cache:
         cache.sync_liked_songs(access_token)
         songs = cache.get_songs_for_source(LIKED_SOURCE_NAME)
@@ -56,7 +78,12 @@ def _sync_liked(access_token="token"):
 
 
 def _sync_albums(access_token="token"):
-    """Runs one saved-albums sync and returns the cached songs."""
+    """Runs one saved-albums sync and returns the cached songs.
+
+    Args:
+        access_token (str): The access token to sync with.
+    """
+
     with SpotifyCache() as cache:
         cache.sync_saved_albums(access_token)
         songs = cache.get_songs_for_source(SAVED_ALBUMS_SOURCE_NAME)
@@ -73,7 +100,8 @@ def test_liked_songs_reads_only_new_items_on_second_run(cache_path, spotify_call
     spotify_calls(responses)
     _sync_liked()
 
-    responses[SPOTIFY_ME_TRACKS_URL].insert(0, _saved("t3", "2026-03-01"))
+    new_item = _saved("t3", "2026-03-01")
+    responses[SPOTIFY_ME_TRACKS_URL].insert(0, new_item)
     songs = _sync_liked()
 
     assert sorted(song.id for song in songs) == ["t1", "t2", "t3"]
@@ -117,6 +145,7 @@ def test_liked_songs_full_read_stores_items_after_a_known_one(cache_path, spotif
 
 def test_liked_songs_skips_null_tracks(cache_path, spotify_calls):
     """Items whose track is null are not stored."""
+
     responses = {
         SPOTIFY_ME_TRACKS_URL: [
             {"added_at": "2026-02-01", "track": None},
@@ -136,6 +165,7 @@ def test_liked_songs_skips_null_tracks(cache_path, spotify_calls):
 
 def test_saved_albums_fetches_album_tracks_only_once(cache_path, spotify_calls):
     """An album's tracks are requested once, even when the album list is read again."""
+
     responses = {
         SPOTIFY_ME_ALBUMS_URL: [_saved_album("a1", "2026-01-01")],
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1"), _track("t2")],
@@ -153,6 +183,7 @@ def test_saved_albums_fetches_album_tracks_only_once(cache_path, spotify_calls):
 
 def test_saved_albums_removes_album_songs_when_album_is_removed(cache_path, spotify_calls):
     """Removing a saved album removes its tracks from the saved albums source."""
+
     responses = {
         SPOTIFY_ME_ALBUMS_URL: [_saved_album("a1", "2026-01-01"), _saved_album("a2", "2026-01-02")],
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1")],
@@ -170,6 +201,7 @@ def test_saved_albums_removes_album_songs_when_album_is_removed(cache_path, spot
 
 def test_saved_albums_full_read_stores_albums_after_a_known_one(cache_path, spotify_calls):
     """When the totals differ, a full read fetches albums that came after the first known one."""
+
     responses = {
         SPOTIFY_ME_ALBUMS_URL: [_saved_album("a1", "2026-01-01")],
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1")],
@@ -192,7 +224,9 @@ def test_base_library_cache_requires_subclass_methods():
     """The base class cannot read or store an item, so subclasses must define both methods."""
     connection = sqlite3.connect(":memory:")
     stats = SyncStats()
-    cache = LibraryCache(connection, stats, TrackStore(connection, stats), SourceLinks(connection, stats))
+    track_store = TrackStore(connection, stats)
+    source_links = SourceLinks(connection, stats)
+    cache = LibraryCache(connection, stats, track_store, source_links)
 
     with pytest.raises(NotImplementedError):
         cache._item_id({})
@@ -203,20 +237,20 @@ def test_base_library_cache_requires_subclass_methods():
     connection.close()
 
 
-
 # Testing the "sync" method with refresh from the "LikedSongsCache" class.
 
 
 def test_liked_songs_refresh_restores_raw_copies_of_cached_tracks(cache_path, spotify_calls):
     """With refresh, every liked track is read again, so missing raw copies are stored."""
-    spotify_calls({SPOTIFY_ME_TRACKS_URL: [_saved("t1", "2026-01-01")]})
+    saved = _saved("t1", "2026-01-01")
+    spotify_calls({SPOTIFY_ME_TRACKS_URL: [saved]})
     _sync_liked()
 
     with SpotifyCache() as cache:
         cache._connection.execute("DELETE FROM raw_tracks")
         cache._connection.commit()
 
-    spotify_calls({SPOTIFY_ME_TRACKS_URL: [_saved("t1", "2026-01-01")]})
+    spotify_calls({SPOTIFY_ME_TRACKS_URL: [saved]})
 
     with SpotifyCache() as cache:
         cache.sync_liked_songs("token", refresh=True)

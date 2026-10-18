@@ -17,7 +17,14 @@ from sgs.errors import SpotifyAuthError
 
 
 def _response(status_code=200, payload=None, text=""):
-    """Builds a fake requests.Response."""
+    """Builds a fake requests.Response.
+
+    Args:
+        status_code (int): The HTTP status code.
+        payload (dict | None): The JSON body, or None.
+        text (str): The raw body text.
+    """
+
     response = MagicMock()
     response.status_code = status_code
     response.text = text
@@ -33,8 +40,11 @@ def test_pkce_challenge_is_s256_of_verifier():
     """The challenge is the URL-safe base64 SHA-256 of the verifier, without padding."""
     code_verifier, code_challenge = generate_pkce_pair()
 
-    digest = hashlib.sha256(code_verifier.encode("ascii")).digest()
-    expected = base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
+    encoded_verifier = code_verifier.encode("ascii")
+    digest = hashlib.sha256(encoded_verifier).digest()
+    raw_challenge = base64.urlsafe_b64encode(digest)
+    unpadded = raw_challenge.rstrip(b"=")
+    expected = unpadded.decode("ascii")
 
     assert code_challenge == expected
     assert len(code_verifier) >= 43
@@ -57,7 +67,8 @@ def test_generate_state_is_random_and_url_safe():
     second_state = generate_state()
 
     assert first_state != second_state
-    assert all(char.isalnum() or char in "-_" for char in first_state)
+    valid_chars = [char.isalnum() or char in "-_" for char in first_state]
+    assert all(valid_chars)
 
 
 # Testing the "parse_token_response" function.
@@ -65,6 +76,7 @@ def test_generate_state_is_random_and_url_safe():
 
 def test_parse_token_response_success():
     """A successful response becomes a TokenInfo with the new refresh token."""
+
     response = _response(
         payload={
             "access_token": "new-access",

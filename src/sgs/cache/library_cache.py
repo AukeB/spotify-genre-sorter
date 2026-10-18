@@ -10,6 +10,7 @@ import logging
 import sqlite3
 from collections.abc import Iterable
 
+from sgs.api.spotify_api import fetch_total, get_all_pages
 from sgs.cache.source_links import SourceLinks
 from sgs.cache.sync_stats import SyncStats
 from sgs.cache.track_filters import usable_tracks
@@ -21,8 +22,6 @@ from sgs.constants import (
     SPOTIFY_ME_ALBUMS_URL,
     SPOTIFY_ME_TRACKS_URL,
 )
-
-from sgs.api.spotify_api import fetch_total, get_all_pages
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +64,7 @@ class LibraryCache:
             source_links (SourceLinks): Keeps the source's song links up to
                 date.
         """
+
         self._connection = connection
         self._stats = stats
         self._track_store = track_store
@@ -80,6 +80,7 @@ class LibraryCache:
         Returns:
             known (bool): True if the item is cached as it is now.
         """
+
         row = self._connection.execute(
             "SELECT added_at FROM library_items WHERE source_name = ? AND item_id = ?",
             (self._source_name, item_id),
@@ -96,6 +97,7 @@ class LibraryCache:
             item_id (str): The track ID or album ID.
             added_at (str): When the item was added, from Spotify.
         """
+
         row = self._connection.execute(
             "SELECT added_at FROM library_items WHERE source_name = ? AND item_id = ?",
             (self._source_name, item_id),
@@ -120,6 +122,7 @@ class LibraryCache:
         Returns:
             count (int): The number of cached items.
         """
+
         row = self._connection.execute(
             "SELECT COUNT(*) FROM library_items WHERE source_name = ?",
             (self._source_name,),
@@ -138,6 +141,7 @@ class LibraryCache:
         Returns:
             removed_ids (list[str]): IDs of the items that were deleted.
         """
+
         rows = self._connection.execute(
             "SELECT item_id FROM library_items WHERE source_name = ?",
             (self._source_name,),
@@ -162,6 +166,7 @@ class LibraryCache:
         Returns:
             item_id (str | None): The track or album ID.
         """
+
         raise NotImplementedError
 
     def _store_item(self, item: dict, access_token: str) -> None:
@@ -171,6 +176,7 @@ class LibraryCache:
             item (dict): One item from the list endpoint.
             access_token (str): A valid Spotify access token.
         """
+
         raise NotImplementedError
 
     def _on_removed(self, removed_ids: list[str]) -> None:
@@ -179,6 +185,7 @@ class LibraryCache:
         Args:
             removed_ids (list[str]): IDs of the removed items.
         """
+
         return None
 
     def _collect_new_items(self, pages: Iterable[dict], refresh: bool) -> list[dict]:
@@ -193,6 +200,7 @@ class LibraryCache:
         Returns:
             new_items (list[dict]): The items that are not cached yet.
         """
+
         new_items = []
 
         for item in pages:
@@ -214,9 +222,9 @@ class LibraryCache:
         Args:
             access_token (str): A valid Spotify access token.
         """
-        pages = get_all_pages(
-            self._list_url, access_token, description=self._label.lower()
-        )
+
+        description = self._label.lower()
+        pages = get_all_pages(self._list_url, access_token, description=description)
 
         kept_ids: set[str] = set()
 
@@ -244,10 +252,11 @@ class LibraryCache:
             refresh (bool): If True, read every item again, including items
                 already cached, so their raw copies are stored.
         """
+
         total = fetch_total(self._list_url, access_token)
-        pages = get_all_pages(
-            self._list_url, access_token, description=self._label.lower()
-        )
+
+        description = self._label.lower()
+        pages = get_all_pages(self._list_url, access_token, description=description)
 
         new_items = self._collect_new_items(pages, refresh)
 
@@ -297,6 +306,7 @@ class LikedSongsCache(LibraryCache):
         Returns:
             item_id (str | None): The track ID.
         """
+
         track = item.get("track")
 
         if track is None:
@@ -314,6 +324,7 @@ class LikedSongsCache(LibraryCache):
             access_token (str): Unused. Kept so every library cache has the same
                 signature.
         """
+
         track = item["track"]
 
         with self._connection:
@@ -337,6 +348,7 @@ class SavedAlbumsCache(LibraryCache):
     _source_name = SAVED_ALBUMS_SOURCE_NAME
     _list_url = SPOTIFY_ME_ALBUMS_URL
     _label = "Saved albums"
+
     _song_ids_sql = (
         "SELECT album_songs.song_id FROM album_songs "
         "JOIN library_items ON library_items.item_id = album_songs.album_id "
@@ -352,6 +364,7 @@ class SavedAlbumsCache(LibraryCache):
         Returns:
             item_id (str | None): The album ID.
         """
+
         album = item["album"]
         item_id = album["id"]
 
@@ -364,6 +377,7 @@ class SavedAlbumsCache(LibraryCache):
             item (dict): One saved-album item from Spotify.
             access_token (str): A valid Spotify access token.
         """
+
         album = item["album"]
         self._track_store.store_album(album)
         tracks_url = f"{SPOTIFY_API_BASE_URL}/albums/{album['id']}/tracks"
@@ -394,6 +408,7 @@ class SavedAlbumsCache(LibraryCache):
         Args:
             removed_ids (list[str]): IDs of the removed albums.
         """
+
         with self._connection:
             for album_id in removed_ids:
                 self._connection.execute(

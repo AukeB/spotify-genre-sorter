@@ -20,6 +20,7 @@ class SourceLinks:
             connection (sqlite3.Connection): Open connection to the cache file.
             stats (SyncStats): Receives the count of rows added.
         """
+
         self._connection = connection
         self._stats = stats
 
@@ -38,6 +39,7 @@ class SourceLinks:
             params (tuple[str, ...]): Values for the placeholders in
                 song_ids_sql.
         """
+
         with self._connection:
             self._connection.execute(
                 "DELETE FROM song_sources WHERE source_name = ? "

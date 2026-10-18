@@ -13,6 +13,7 @@ def usable_tracks(items: Iterable[dict | None]) -> list[dict]:
     Returns:
         tracks (list[dict]): The usable track objects, in the same order.
     """
+
     tracks = []
 
     for track in items:

@@ -6,6 +6,7 @@ across the modules in sgs.cache.
 
 import sqlite3
 from pathlib import Path
+from types import TracebackType
 
 from sgs.cache.genre_response_cache import GenreResponseCache
 from sgs.cache.library_cache import LikedSongsCache, SavedAlbumsCache
@@ -62,6 +63,7 @@ class SpotifyCache:
             db_path (Path | None): Location of the cache file. Defaults to
                 CACHE_DB_PATH when not given.
         """
+
         path = db_path or CACHE_DB_PATH
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -106,6 +108,7 @@ class SpotifyCache:
                 by other users should be read.
             refresh (bool): If True, read the data again even if it is cached.
         """
+
         start = self._stats.start_sync()
         self._playlists.sync(access_token, user_id, include_collaborative, refresh)
         self._stats.finish_sync("Playlist", start)
@@ -117,6 +120,7 @@ class SpotifyCache:
             access_token (str): A valid Spotify access token.
             refresh (bool): If True, read the data again even if it is cached.
         """
+
         start = self._stats.start_sync()
         self._liked_songs.sync(access_token, refresh)
         self._stats.finish_sync("Liked songs", start)
@@ -128,6 +132,7 @@ class SpotifyCache:
             access_token (str): A valid Spotify access token.
             refresh (bool): If True, read the data again even if it is cached.
         """
+
         start = self._stats.start_sync()
         self._saved_albums.sync(access_token, refresh)
         self._stats.finish_sync("Saved albums", start)
@@ -142,6 +147,7 @@ class SpotifyCache:
             time_range (str): The Spotify time range, such as "medium_term".
             refresh (bool): If True, read the data again even if it is cached.
         """
+
         start = self._stats.start_sync()
         self._top_tracks.sync(access_token, time_range, refresh)
         self._stats.finish_sync("Top tracks", start)
@@ -154,6 +160,7 @@ class SpotifyCache:
             lastfm_api_key (str | None): A Last.fm API key, or None to skip
                 Last.fm.
         """
+
         start = self._stats.start_sync()
         self._genre_responses.sync(lastfm_api_key)
         self._stats.finish_sync("Genre responses", start)
@@ -168,6 +175,7 @@ class SpotifyCache:
             songs (list[Song]): The songs from that source, with their artist
                 IDs in credit order.
         """
+
         songs = read_songs_for_source(self._connection, source_name)
 
         return songs
@@ -182,11 +190,17 @@ class SpotifyCache:
         Returns:
             cache (SpotifyCache): This cache instance.
         """
+
         cache = self
 
         return cache
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
         """Closes the connection when the with block ends.
 
         Python always calls this with three arguments, so they must be in the
@@ -206,4 +220,5 @@ class SpotifyCache:
             traceback (TracebackType | None): The traceback of that error, or
                 None if there was none.
         """
+
         self.close()

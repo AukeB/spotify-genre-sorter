@@ -10,7 +10,12 @@ from sgs.cache.track_store import TrackStore
 
 
 def _track(track_id):
-    """Builds a track object with one artist and an album, as Spotify returns them."""
+    """Builds a track object with one artist and an album, as Spotify returns them.
+
+    Args:
+        track_id (str): The Spotify track ID.
+    """
+
     track = {
         "id": track_id,
         "name": f"Song {track_id}",
@@ -31,7 +36,9 @@ def test_store_track_keeps_raw_track_album_and_artist():
     create_schema(connection)
     stats = SyncStats()
 
-    TrackStore(connection, stats).store_track(_track("t1"))
+    track = _track("t1")
+
+    TrackStore(connection, stats).store_track(track)
 
     track_payload = connection.execute(f"SELECT payload FROM {RAW_TRACKS_TABLE}").fetchone()[0]
     album_id = connection.execute(f"SELECT album_id FROM {RAW_ALBUMS_TABLE}").fetchone()[0]

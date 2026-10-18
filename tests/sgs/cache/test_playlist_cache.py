@@ -7,7 +7,13 @@ from sgs.spotify_cache import SpotifyCache
 
 
 def _track(track_id, artist_ids=("artist-1",)):
-    """Builds a Spotify track object with the given artists."""
+    """Builds a Spotify track object with the given artists.
+
+    Args:
+        track_id (str): The Spotify track ID.
+        artist_ids (tuple[str, ...]): The IDs of the track's artists.
+    """
+
     track = {
         "id": track_id,
         "name": f"Song {track_id}",
@@ -20,7 +26,15 @@ def _track(track_id, artist_ids=("artist-1",)):
 
 
 def _playlist(playlist_id, snapshot_id="s1", owner="me", collaborative=False):
-    """Builds a Spotify playlist object."""
+    """Builds a Spotify playlist object.
+
+    Args:
+        playlist_id (str): The Spotify playlist ID.
+        snapshot_id (str): The snapshot ID of the playlist.
+        owner (str): The ID of the playlist's owner.
+        collaborative (bool): Whether the playlist is collaborative.
+    """
+
     playlist = {
         "id": playlist_id,
         "name": f"Playlist {playlist_id}",
@@ -33,7 +47,13 @@ def _playlist(playlist_id, snapshot_id="s1", owner="me", collaborative=False):
 
 
 def _responses(playlists, items_by_playlist):
-    """Builds the responses for the playlists endpoint and each playlist's items."""
+    """Builds the responses for the playlists endpoint and each playlist's items.
+
+    Args:
+        playlists (list[dict]): The playlist objects for the playlists endpoint.
+        items_by_playlist (dict[str, list]): The items of each playlist, keyed by playlist ID.
+    """
+
     responses = {SPOTIFY_ME_PLAYLISTS_URL: playlists}
 
     for playlist_id, items in items_by_playlist.items():
@@ -43,7 +63,14 @@ def _responses(playlists, items_by_playlist):
 
 
 def _sync(access_token="token", user_id="me", include_collaborative=False):
-    """Runs one playlist sync on a cache and returns the cached songs."""
+    """Runs one playlist sync on a cache and returns the cached songs.
+
+    Args:
+        access_token (str): The access token to sync with.
+        user_id (str): The ID of the user whose playlists are read.
+        include_collaborative (bool): Whether to include collaborative playlists.
+    """
+
     with SpotifyCache() as cache:
         cache.sync_playlists(access_token, user_id=user_id, include_collaborative=include_collaborative)
         songs = cache.get_songs_for_source(PLAYLIST_SOURCE_NAME)
@@ -57,7 +84,9 @@ def _sync(access_token="token", user_id="me", include_collaborative=False):
 def test_sync_stores_songs_in_playlist_order(cache_path, spotify_calls):
     """Songs are stored with their playlist position, and artists keep their credit order."""
     items = {"p1": [{"item": _track("t1", ("a1", "a2"))}, {"item": _track("t2")}]}
-    spotify_calls(_responses([_playlist("p1")], items))
+    playlist = _playlist("p1")
+    responses = _responses([playlist], items)
+    spotify_calls(responses)
 
     songs = _sync()
 
@@ -69,7 +98,9 @@ def test_sync_stores_songs_in_playlist_order(cache_path, spotify_calls):
 def test_sync_skips_tracks_without_id(cache_path, spotify_calls):
     """Items without a track ID are not stored, and the remaining songs keep their order."""
     items = {"p1": [{"item": {**_track("t1"), "id": None}}, {"item": _track("t2")}]}
-    spotify_calls(_responses([_playlist("p1")], items))
+    playlist = _playlist("p1")
+    responses = _responses([playlist], items)
+    spotify_calls(responses)
 
     songs = _sync()
 
@@ -78,7 +109,10 @@ def test_sync_skips_tracks_without_id(cache_path, spotify_calls):
 
 def test_sync_skips_unchanged_playlist(cache_path, spotify_calls):
     """A playlist whose snapshot_id is unchanged is not read from Spotify again."""
-    calls = spotify_calls(_responses([_playlist("p1", snapshot_id="s1")], {"p1": [{"item": _track("t1")}]}))
+    playlist = _playlist("p1", snapshot_id="s1")
+    track = _track("t1")
+    responses = _responses([playlist], {"p1": [{"item": track}]})
+    calls = spotify_calls(responses)
 
     _sync()
     _sync()
@@ -89,10 +123,16 @@ def test_sync_skips_unchanged_playlist(cache_path, spotify_calls):
 
 def test_sync_rereads_playlist_when_snapshot_changes(cache_path, spotify_calls):
     """A changed snapshot_id replaces the playlist's songs with the new ones."""
-    spotify_calls(_responses([_playlist("p1", "s1")], {"p1": [{"item": _track("t1")}]}))
+    playlist = _playlist("p1", "s1")
+    track = _track("t1")
+    responses = _responses([playlist], {"p1": [{"item": track}]})
+    spotify_calls(responses)
     _sync()
 
-    spotify_calls(_responses([_playlist("p1", "s2")], {"p1": [{"item": _track("t2")}]}))
+    playlist = _playlist("p1", "s2")
+    track = _track("t2")
+    responses = _responses([playlist], {"p1": [{"item": track}]})
+    spotify_calls(responses)
     songs = _sync()
 
     assert [song.id for song in songs] == ["t2"]
@@ -101,10 +141,15 @@ def test_sync_rereads_playlist_when_snapshot_changes(cache_path, spotify_calls):
 def test_sync_removes_playlists_no_longer_readable(cache_path, spotify_calls):
     """Playlists that disappear or become unreadable are removed from the cache."""
     items = {"p1": [{"item": _track("t1")}], "p2": [{"item": _track("t2")}]}
-    spotify_calls(_responses([_playlist("p1"), _playlist("p2")], items))
+    first_playlist = _playlist("p1")
+    second_playlist = _playlist("p2")
+    responses = _responses([first_playlist, second_playlist], items)
+    spotify_calls(responses)
     _sync()
 
-    spotify_calls(_responses([_playlist("p1")], items))
+    playlist = _playlist("p1")
+    responses = _responses([playlist], items)
+    spotify_calls(responses)
     songs = _sync()
 
     assert [song.id for song in songs] == ["t1"]
@@ -113,7 +158,9 @@ def test_sync_removes_playlists_no_longer_readable(cache_path, spotify_calls):
 def test_sync_skips_followed_playlists(cache_path, spotify_calls):
     """Playlists owned by someone else are not cached when collaborative is off."""
     items = {"p1": [{"item": _track("t1")}]}
-    spotify_calls(_responses([_playlist("p1", owner="other", collaborative=False)], items))
+    playlist = _playlist("p1", owner="other", collaborative=False)
+    responses = _responses([playlist], items)
+    spotify_calls(responses)
 
     songs = _sync(include_collaborative=True)
 
@@ -130,11 +177,15 @@ def test_sync_counts_changed_song_and_artist_names(cache_path, spotify_calls, ca
     second_track["artists"] = [{"id": "a1", "name": "New Artist"}]
     second_track["name"] = "New Song"
 
-    spotify_calls(_responses([_playlist("p1", "s1")], {"p1": [{"item": first_track}]}))
+    playlist = _playlist("p1", "s1")
+    responses = _responses([playlist], {"p1": [{"item": first_track}]})
+    spotify_calls(responses)
     _sync()
 
     caplog.set_level(logging.INFO)
-    spotify_calls(_responses([_playlist("p1", "s2")], {"p1": [{"item": second_track}]}))
+    playlist = _playlist("p1", "s2")
+    responses = _responses([playlist], {"p1": [{"item": second_track}]})
+    spotify_calls(responses)
     _sync()
 
     changed_lines = [record.getMessage() for record in caplog.records if "changed" in record.getMessage()]
@@ -147,7 +198,10 @@ def test_sync_counts_changed_song_and_artist_names(cache_path, spotify_calls, ca
 
 def test_sync_with_refresh_reads_unchanged_playlist_again(cache_path, spotify_calls):
     """With refresh, a playlist whose snapshot did not change is read from Spotify again."""
-    calls = spotify_calls(_responses([_playlist("p1", "s1")], {"p1": [{"item": _track("t1")}]}))
+    playlist = _playlist("p1", "s1")
+    track = _track("t1")
+    responses = _responses([playlist], {"p1": [{"item": track}]})
+    calls = spotify_calls(responses)
     _sync()
 
     with SpotifyCache() as cache:

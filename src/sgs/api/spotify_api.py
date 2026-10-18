@@ -23,6 +23,7 @@ def fetch_current_user(access_token: str) -> dict:
         requests.HTTPError: If Spotify rejects the request, for example with an
             expired or invalid token.
     """
+
     response = get(
         SPOTIFY_ME_URL,
         headers={"Authorization": f"Bearer {access_token}"},
@@ -50,6 +51,7 @@ def fetch_total(url: str, access_token: str) -> int:
     Raises:
         requests.HTTPError: If Spotify rejects the request.
     """
+
     response = get(
         url,
         headers={"Authorization": f"Bearer {access_token}"},
@@ -78,6 +80,7 @@ def _fetch_page(url: str, access_token: str, params: dict[str, str] | None) -> d
     Raises:
         requests.HTTPError: If Spotify rejects the request.
     """
+
     response = get(
         url,
         headers={"Authorization": f"Bearer {access_token}"},
@@ -114,6 +117,7 @@ def get_all_pages(
     Raises:
         requests.HTTPError: If Spotify rejects any of the requests.
     """
+
     next_url = url
     next_params = params
 
@@ -122,7 +126,8 @@ def get_all_pages(
         items = page["items"]
 
         source = description or next_url
-        logger.info("Read page of %d items from %s", len(items), source)
+        item_count = len(items)
+        logger.info("Read page of %d items from %s", item_count, source)
 
         yield from items
 
@@ -154,6 +159,7 @@ def is_readable_playlist(
     Returns:
         readable (bool): True if the playlist meets one of the conditions above.
     """
+
     is_owner = playlist["owner"]["id"] == user_id
     is_collaborative = playlist["collaborative"] and include_collaborative
     readable = is_owner or is_collaborative

@@ -50,7 +50,8 @@ def test_get_all_pages_follows_next_links(mock_get):
     second_page.json.return_value = {"items": [3], "next": None}
     mock_get.side_effect = [first_page, second_page]
 
-    items = list(get_all_pages("https://api.example/items", "token-123", params={"limit": "2"}))
+    pages = get_all_pages("https://api.example/items", "token-123", params={"limit": "2"})
+    items = list(pages)
 
     assert items == [1, 2, 3]
     assert mock_get.call_args_list[0].args[0] == "https://api.example/items"
@@ -66,8 +67,10 @@ def test_get_all_pages_raises_on_error(mock_get):
     response.raise_for_status.side_effect = requests.HTTPError("429 Too Many Requests")
     mock_get.return_value = response
 
+    pages = get_all_pages("https://api.example/items", "token-123")
+
     with pytest.raises(requests.HTTPError):
-        list(get_all_pages("https://api.example/items", "token-123"))
+        list(pages)
 
 
 # Testing the "fetch_total" function.
@@ -109,8 +112,10 @@ def test_get_all_pages_retries_after_rate_limit(mock_get):
     page.json.return_value = {"items": [1], "next": None}
     mock_get.side_effect = [limited, page]
 
+    pages = get_all_pages("https://api.example/items", "token-123")
+
     with patch("sgs.utils.retry.time.sleep"):
-        items = list(get_all_pages("https://api.example/items", "token-123"))
+        items = list(pages)
 
     assert items == [1]
     assert mock_get.call_count == 2

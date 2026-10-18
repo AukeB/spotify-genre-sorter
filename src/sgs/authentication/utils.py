@@ -24,6 +24,7 @@ def generate_pkce_pair() -> tuple[str, str]:
     Returns:
         pkce_pair (tuple[str, str]): The code verifier and the code challenge.
     """
+
     code_verifier = secrets.token_urlsafe(64)
     verifier_bytes = code_verifier.encode("ascii")
     digest = hashlib.sha256(verifier_bytes).digest()
@@ -40,6 +41,7 @@ def generate_state() -> str:
     Returns:
         state (str): A random URL-safe string.
     """
+
     state = secrets.token_urlsafe(16)
 
     return state
@@ -62,18 +64,25 @@ def parse_token_response(
     Raises:
         SpotifyAuthError: If the response is not successful.
     """
+
     if response.status_code != 200:
         raise SpotifyAuthError(
             f"Token request failed ({response.status_code}): {response.text}"
         )
 
     data = response.json()
-    expires_at = datetime.now(timezone.utc) + timedelta(seconds=int(data["expires_in"]))
+    expires_in = int(data["expires_in"])
+    lifetime = timedelta(seconds=expires_in)
+    now = datetime.now(timezone.utc)
+    expires_at = now + lifetime
+    refresh_token = data.get("refresh_token") or previous_refresh_token
+    scope = data.get("scope", "")
+
     token = TokenInfo(
         access_token=data["access_token"],
-        refresh_token=data.get("refresh_token") or previous_refresh_token,
+        refresh_token=refresh_token,
         expires_at=expires_at,
-        scope=data.get("scope", ""),
+        scope=scope,
     )
 
     return token

@@ -3,9 +3,9 @@
 import logging
 import sqlite3
 
+from sgs.api.spotify_api import get_all_pages
 from sgs.cache.source_links import SourceLinks
 from sgs.cache.sync_stats import SyncStats
-from sgs.utils.time_utils import utc_cutoff, utc_now
 from sgs.cache.track_filters import usable_tracks
 from sgs.cache.track_store import TrackStore
 from sgs.constants import (
@@ -13,8 +13,7 @@ from sgs.constants import (
     TOP_TRACKS_MAX_AGE_HOURS,
     TOP_TRACKS_SOURCE_NAME,
 )
-
-from sgs.api.spotify_api import get_all_pages
+from sgs.utils.time_utils import utc_cutoff, utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +46,7 @@ class TopTrackCache:
             track_store (TrackStore): Saves each ranked track.
             source_links (SourceLinks): Keeps the top tracks source up to date.
         """
+
         self._connection = connection
         self._stats = stats
         self._track_store = track_store
@@ -62,6 +62,7 @@ class TopTrackCache:
             fresh (bool): True if the ranking is newer than
                 TOP_TRACKS_MAX_AGE_HOURS.
         """
+
         row = self._connection.execute(
             "SELECT MAX(fetched_at) FROM top_track_rankings WHERE time_range = ?",
             (time_range,),
@@ -85,6 +86,7 @@ class TopTrackCache:
             time_range (str): The Spotify time range, such as "medium_term".
             access_token (str): A valid Spotify access token.
         """
+
         pages = get_all_pages(
             SPOTIFY_ME_TOP_TRACKS_URL,
             access_token,
@@ -110,7 +112,8 @@ class TopTrackCache:
                     (time_range, position, track["id"], fetched_at),
                 )
 
-        self._stats.count_added("top_track_rankings", len(tracks))
+        track_count = len(tracks)
+        self._stats.count_added("top_track_rankings", track_count)
 
     def sync(self, access_token: str, time_range: str, refresh: bool = False) -> None:
         """Brings the cached top tracks for a time range up to date.
@@ -121,6 +124,7 @@ class TopTrackCache:
             refresh (bool): If True, read the ranking even when it is still
                 fresh.
         """
+
         if not refresh and self._has_fresh_ranking(time_range):
             logger.info("Top tracks (%s) are up to date, skipping", time_range)
         else:

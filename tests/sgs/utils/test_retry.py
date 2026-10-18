@@ -9,7 +9,13 @@ from sgs.utils.retry import retry
 
 
 def _flaky(failures, result="ok"):
-    """Builds a function that raises RetryableApiError the given number of times, then returns result."""
+    """Builds a function that raises RetryableApiError the given number of times, then returns result.
+
+    Args:
+        failures (int): How many calls raise before one succeeds.
+        result (str): The value returned by the successful call.
+    """
+
     state = {"calls": 0}
 
     def func():
@@ -30,7 +36,8 @@ def test_retry_returns_result_after_failures(monkeypatch):
     """A function that fails twice and then succeeds returns its result."""
     sleep = MagicMock()
     monkeypatch.setattr("sgs.utils.retry.time.sleep", sleep)
-    wrapped = retry(RetryableApiError, max_attempts=5, base_delay=1.0, backoff=2.0, max_delay=60.0)(_flaky(2))
+    flaky = _flaky(2)
+    wrapped = retry(RetryableApiError, max_attempts=5, base_delay=1.0, backoff=2.0, max_delay=60.0)(flaky)
 
     result = wrapped()
 
@@ -40,8 +47,10 @@ def test_retry_returns_result_after_failures(monkeypatch):
 
 def test_retry_gives_up_after_max_attempts(monkeypatch):
     """After the last attempt fails, the error is raised."""
-    monkeypatch.setattr("sgs.utils.retry.time.sleep", MagicMock())
-    wrapped = retry(RetryableApiError, max_attempts=3, base_delay=1.0, backoff=2.0, max_delay=60.0)(_flaky(10))
+    sleep = MagicMock()
+    monkeypatch.setattr("sgs.utils.retry.time.sleep", sleep)
+    flaky = _flaky(10)
+    wrapped = retry(RetryableApiError, max_attempts=3, base_delay=1.0, backoff=2.0, max_delay=60.0)(flaky)
 
     with pytest.raises(RetryableApiError):
         wrapped()
@@ -51,7 +60,8 @@ def test_retry_caps_exponential_wait_at_max_delay(monkeypatch):
     """A wait that would grow past max_delay is capped at max_delay."""
     sleep = MagicMock()
     monkeypatch.setattr("sgs.utils.retry.time.sleep", sleep)
-    wrapped = retry(RetryableApiError, max_attempts=4, base_delay=10.0, backoff=10.0, max_delay=30.0)(_flaky(3))
+    flaky = _flaky(3)
+    wrapped = retry(RetryableApiError, max_attempts=4, base_delay=10.0, backoff=10.0, max_delay=30.0)(flaky)
 
     wrapped()
 

@@ -8,13 +8,19 @@ from sgs.authentication.callback_handler import CallbackHandler, CallbackServer
 
 
 def _serve_one_request(path):
-    """Starts a loopback callback server, sends one GET request, and returns the server."""
+    """Starts a loopback callback server, sends one GET request, and returns the server.
+
+    Args:
+        path (str): The request path to send, including the query string.
+    """
+
     server = CallbackServer(("127.0.0.1", 0), CallbackHandler)
     server.callback_params = None
     thread = threading.Thread(target=server.handle_request)
     thread.start()
 
     url = f"http://127.0.0.1:{server.server_address[1]}{path}"
+
     try:
         with urllib.request.urlopen(url, timeout=5) as response:
             status = response.status

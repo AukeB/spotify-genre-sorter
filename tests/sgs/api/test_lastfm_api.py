@@ -9,7 +9,12 @@ from sgs.errors import LastfmInvalidKeyError, RetryableApiError
 
 
 def _response(body):
-    """Builds a fake requests.Response with the given JSON body."""
+    """Builds a fake requests.Response with the given JSON body.
+
+    Args:
+        body (dict): The JSON body of the response.
+    """
+
     response = MagicMock()
     response.json.return_value = body
 

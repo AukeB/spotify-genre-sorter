@@ -33,6 +33,7 @@ class SyncStats:
             table (str): The table name.
             amount (int): How many rows were added. Defaults to 1.
         """
+
         self._added[table] += amount
 
     def count_changed(self, table: str) -> None:
@@ -41,6 +42,7 @@ class SyncStats:
         Args:
             table (str): The table name.
         """
+
         self._changed[table] += 1
 
     def start_sync(self) -> float:
@@ -49,6 +51,7 @@ class SyncStats:
         Returns:
             start (float): The start time from time.perf_counter().
         """
+
         self._added.clear()
         self._changed.clear()
         start = time.perf_counter()
@@ -57,8 +60,10 @@ class SyncStats:
 
     def _log_changes(self) -> None:
         """Logs how many rows were added and changed during the last sync."""
-        logger.info("Cache rows added: %s", dict(self._added))
-        logger.info("Cache rows changed: %s", dict(self._changed))
+        added_counts = dict(self._added)
+        changed_counts = dict(self._changed)
+        logger.info("Cache rows added: %s", added_counts)
+        logger.info("Cache rows changed: %s", changed_counts)
 
     def finish_sync(self, name: str, start: float) -> None:
         """Logs the counts and how long the sync took.
@@ -67,6 +72,7 @@ class SyncStats:
             name (str): The name of the sync, used in the log message.
             start (float): The start time returned by start_sync().
         """
+
         self._log_changes()
 
         elapsed = time.perf_counter() - start

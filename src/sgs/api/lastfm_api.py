@@ -5,13 +5,12 @@ most problems in the response body, so the status is taken from that body.
 """
 
 from sgs.api.http import get, retry_api_error
-from sgs.errors import LastfmInvalidKeyError, RetryableApiError
 from sgs.constants import (
+    APP_USER_AGENT,
     LASTFM_API_URL,
     LASTFM_MIN_INTERVAL_SECONDS,
-    APP_USER_AGENT,
 )
-
+from sgs.errors import LastfmInvalidKeyError, RetryableApiError
 from sgs.utils.rate_limiter import RateLimiter
 
 _limiter = RateLimiter(LASTFM_MIN_INTERVAL_SECONDS)
@@ -39,7 +38,9 @@ def fetch_lastfm_top_tags(artist_name: str, api_key: str) -> dict:
             a network problem or a server error without a Last.fm body.
         LastfmInvalidKeyError: If Last.fm rejects the API key.
     """
+
     _limiter.wait()
+
     response = get(
         LASTFM_API_URL,
         params={

@@ -32,6 +32,7 @@ class RawStore:
         Args:
             connection (sqlite3.Connection): Open connection to the cache file.
         """
+
         self._connection = connection
 
     def _upsert(self, table: str, id_column: str, object_id: str, data: dict) -> None:
@@ -44,6 +45,7 @@ class RawStore:
             object_id (str): The Spotify ID of the object.
             data (dict): The object as Spotify returned it.
         """
+
         payload = json.dumps(data)
         fetched_at = utc_now()
 
@@ -60,6 +62,7 @@ class RawStore:
         Args:
             track (dict): A track object from Spotify.
         """
+
         self._upsert(RAW_TRACKS_TABLE, "song_id", track["id"], track)
 
     def store_album(self, album: dict) -> None:
@@ -68,6 +71,7 @@ class RawStore:
         Args:
             album (dict): An album object from Spotify.
         """
+
         self._upsert(RAW_ALBUMS_TABLE, "album_id", album["id"], album)
 
     def store_artist(self, artist: dict) -> None:
@@ -76,4 +80,5 @@ class RawStore:
         Args:
             artist (dict): A simplified artist object from Spotify.
         """
+
         self._upsert(RAW_ARTISTS_TABLE, "artist_id", artist["id"], artist)

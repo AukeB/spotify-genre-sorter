@@ -10,7 +10,17 @@ ADDED_AT = "2026-01-01T00:00:00+00:00"
 
 
 def _config(liked=False, albums=False, top=False, playlists=False, time_range="medium_term", collaborative=True):
-    """Builds a ConfigModel with the given sources and options."""
+    """Builds a ConfigModel with the given sources and options.
+
+    Args:
+        liked (bool): Read the saved tracks.
+        albums (bool): Read the saved albums.
+        top (bool): Read the top tracks.
+        playlists (bool): Read the playlists.
+        time_range (str): The time range for the top tracks.
+        collaborative (bool): Include collaborative playlists.
+    """
+
     data = {
         "sources": {
             "liked_songs": liked,
@@ -30,7 +40,12 @@ def _config(liked=False, albums=False, top=False, playlists=False, time_range="m
 
 
 def _track(track_id):
-    """Builds a Spotify track object."""
+    """Builds a Spotify track object.
+
+    Args:
+        track_id (str): The Spotify track ID.
+    """
+
     track = {
         "id": track_id,
         "name": f"Song {track_id}",
@@ -44,6 +59,7 @@ def _track(track_id):
 
 def _playlist_responses():
     """Playlists owned by me, followed from someone else, and collaborative with someone else."""
+
     responses = {
         SPOTIFY_ME_PLAYLISTS_URL: [
             {"id": "p1", "name": "P1", "snapshot_id": "s1", "owner": {"id": "me"}, "collaborative": False},
@@ -67,15 +83,20 @@ def _playlist_responses():
 
 def test_liked_songs_skips_unavailable_tracks(cache_path, spotify_calls):
     """Null tracks are skipped and the rest are tagged with the liked_songs source."""
-    spotify_calls({
+
+    responses = {
         SPOTIFY_ME_TRACKS_URL: [
             {"added_at": ADDED_AT, "track": _track("t1")},
             {"added_at": ADDED_AT, "track": None},
             {"added_at": ADDED_AT, "track": _track("t2")},
         ]
-    })
+    }
 
-    songs = SongSources(_config(liked=True), "token").get_all_songs()
+    spotify_calls(responses)
+
+    config = _config(liked=True)
+    sources = SongSources(config, "token")
+    songs = sources.get_all_songs()
 
     assert [song.id for song in songs] == ["t1", "t2"]
     assert all(song.sources == {"liked_songs"} for song in songs)
@@ -86,12 +107,17 @@ def test_liked_songs_skips_unavailable_tracks(cache_path, spotify_calls):
 
 def test_saved_albums_reads_every_album_track(cache_path, spotify_calls):
     """Tracks come from each saved album's own track list."""
-    spotify_calls({
+
+    responses = {
         SPOTIFY_ME_ALBUMS_URL: [{"added_at": ADDED_AT, "album": {"id": "a1", "name": "Album 1"}}],
         f"{SPOTIFY_API_BASE_URL}/albums/a1/tracks": [_track("t1"), _track("t2")],
-    })
+    }
 
-    songs = SongSources(_config(albums=True), "token").get_all_songs()
+    spotify_calls(responses)
+
+    config = _config(albums=True)
+    sources = SongSources(config, "token")
+    songs = sources.get_all_songs()
 
     assert [song.id for song in songs] == ["t1", "t2"]
     assert all(song.sources == {"saved_albums"} for song in songs)
@@ -102,9 +128,12 @@ def test_saved_albums_reads_every_album_track(cache_path, spotify_calls):
 
 def test_top_tracks_passes_configured_time_range(cache_path, spotify_calls):
     """The configured time range is sent as a query parameter."""
-    calls = spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]})
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1")]}
+    calls = spotify_calls(responses)
 
-    songs = SongSources(_config(top=True, time_range="long_term"), "token").get_all_songs()
+    config = _config(top=True, time_range="long_term")
+    sources = SongSources(config, "token")
+    songs = sources.get_all_songs()
 
     assert calls.pages.call_args.kwargs["params"] == {"time_range": "long_term"}
     assert songs[0].sources == {"top_tracks"}
@@ -115,10 +144,14 @@ def test_top_tracks_passes_configured_time_range(cache_path, spotify_calls):
 
 def test_playlists_only_reads_owned_playlists_when_collaborative_disabled(cache_path, spotify_calls):
     """Followed playlists are never read. Collaborative playlists are read only when enabled."""
-    spotify_calls(_playlist_responses())
+    responses = _playlist_responses()
+    spotify_calls(responses)
+
+    config = _config(playlists=True, collaborative=False)
+    sources = SongSources(config, "token")
 
     with patch("sgs.song_sources.fetch_current_user", return_value={"id": "me"}):
-        songs = SongSources(_config(playlists=True, collaborative=False), "token").get_all_songs()
+        songs = sources.get_all_songs()
 
     assert [song.id for song in songs] == ["t1"]
     assert songs[0].sources == {"your_playlists"}
@@ -126,10 +159,14 @@ def test_playlists_only_reads_owned_playlists_when_collaborative_disabled(cache_
 
 def test_playlists_reads_collaborative_playlists_when_enabled(cache_path, spotify_calls):
     """Collaborative playlists owned by others are read when enabled. Skips null, local, and episode items."""
-    spotify_calls(_playlist_responses())
+    responses = _playlist_responses()
+    spotify_calls(responses)
+
+    config = _config(playlists=True, collaborative=True)
+    sources = SongSources(config, "token")
 
     with patch("sgs.song_sources.fetch_current_user", return_value={"id": "me"}):
-        songs = SongSources(_config(playlists=True, collaborative=True), "token").get_all_songs()
+        songs = sources.get_all_songs()
 
     assert sorted(song.id for song in songs) == ["t1", "t3"]
 
@@ -139,9 +176,12 @@ def test_playlists_reads_collaborative_playlists_when_enabled(cache_path, spotif
 
 def test_get_all_songs_skips_disabled_sources(cache_path, spotify_calls):
     """Only sources set to true are requested from Spotify."""
-    calls = spotify_calls({SPOTIFY_ME_TOP_TRACKS_URL: []})
+    responses = {SPOTIFY_ME_TOP_TRACKS_URL: []}
+    calls = spotify_calls(responses)
 
-    SongSources(_config(top=True), "token").get_all_songs()
+    config = _config(top=True)
+    sources = SongSources(config, "token")
+    sources.get_all_songs()
 
     requested_urls = [call.args[0] for call in calls.pages.call_args_list]
     assert requested_urls == [SPOTIFY_ME_TOP_TRACKS_URL]
@@ -149,12 +189,17 @@ def test_get_all_songs_skips_disabled_sources(cache_path, spotify_calls):
 
 def test_get_all_songs_merges_duplicate_tracks_by_id(cache_path, spotify_calls):
     """A track found in two sources appears once with both sources. Different track IDs stay separate."""
-    spotify_calls({
+
+    responses = {
         SPOTIFY_ME_TRACKS_URL: [{"added_at": ADDED_AT, "track": _track("t1")}],
         SPOTIFY_ME_TOP_TRACKS_URL: [_track("t1"), _track("t2")],
-    })
+    }
 
-    songs = SongSources(_config(liked=True, top=True), "token").get_all_songs()
+    spotify_calls(responses)
+
+    config = _config(liked=True, top=True)
+    sources = SongSources(config, "token")
+    songs = sources.get_all_songs()
 
     by_id = {song.id: song for song in songs}
     assert set(by_id) == {"t1", "t2"}

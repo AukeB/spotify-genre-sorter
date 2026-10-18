@@ -30,6 +30,7 @@ class RetryableApiError(Exception):
             retry_after (float | None): Seconds to wait, or None if unknown.
             status_code (int | None): The HTTP status code, if there was one.
         """
+
         if status_code is None:
             message = "The API asked for the request to be retried"
         else:

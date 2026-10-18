@@ -14,21 +14,35 @@ MODULE = "sgs.authentication.authentication"
 
 
 def _token(expires_in: int = 3600, refresh_token: str | None = "refresh-1"):
-    """Builds a TokenInfo that expires after the given number of seconds."""
+    """Builds a TokenInfo that expires after the given number of seconds.
+
+    Args:
+        expires_in (int): Seconds until the token expires.
+        refresh_token (str | None): The refresh token to store, or None.
+    """
+
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
     token = TokenInfo(
         access_token="access-1",
         refresh_token=refresh_token,
-        expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
+        expires_at=expires_at,
     )
 
     return token
 
 
 def _token_response(status_code=200, payload=None):
-    """Builds a fake token endpoint response."""
+    """Builds a fake token endpoint response.
+
+    Args:
+        status_code (int): The HTTP status code.
+        payload (dict): The JSON body of the response.
+    """
+
     response = MagicMock()
     response.status_code = status_code
     response.text = ""
+
     response.json.return_value = payload or {
         "access_token": "access-2",
         "refresh_token": "refresh-2",
@@ -93,9 +107,10 @@ def test_exchange_code_posts_authorization_code(authenticator, session):
 
 def test_refresh_keeps_refresh_token_when_not_returned(authenticator, session):
     """A refresh without a new refresh token keeps the old one."""
-    session.post.return_value = _token_response(
-        payload={"access_token": "access-3", "expires_in": 3600}
-    )
+
+    payload = {"access_token": "access-3", "expires_in": 3600}
+    response = _token_response(payload=payload)
+    session.post.return_value = response
 
     token = authenticator._refresh("refresh-1")
 
@@ -108,11 +123,14 @@ def test_refresh_keeps_refresh_token_when_not_returned(authenticator, session):
 
 def test_login_stores_token_from_callback(authenticator):
     """A full login opens the browser, waits for the code, and stores the token."""
+
+    exchanged = _token()
+
     with (
         patch(f"{MODULE}.webbrowser.open") as mock_open,
         patch.object(authenticator, "_wait_for_auth_code", return_value="code-1"),
         patch.object(
-            authenticator, "_exchange_code", return_value=_token()
+            authenticator, "_exchange_code", return_value=exchanged
         ) as mock_exchange,
     ):
         token = authenticator.login()
@@ -127,7 +145,10 @@ def test_login_stores_token_from_callback(authenticator):
 
 def test_get_valid_token_logs_in_when_no_token(authenticator):
     """Without a stored token, get_valid_token runs a login."""
-    with patch.object(authenticator, "login", return_value=_token()) as mock_login:
+
+    login_token = _token()
+
+    with patch.object(authenticator, "login", return_value=login_token) as mock_login:
         access_token = authenticator.get_valid_token()
 
     mock_login.assert_called_once()
@@ -168,9 +189,12 @@ def test_get_valid_token_logs_in_when_refresh_fails(authenticator):
     """If refreshing fails, the user is sent through a new login."""
     authenticator._token = _token(expires_in=-10)
 
+    refresh_error = SpotifyAuthError("nope")
+    login_token = _token()
+
     with (
-        patch.object(authenticator, "_refresh", side_effect=SpotifyAuthError("nope")),
-        patch.object(authenticator, "login", return_value=_token()) as mock_login,
+        patch.object(authenticator, "_refresh", side_effect=refresh_error),
+        patch.object(authenticator, "login", return_value=login_token) as mock_login,
     ):
         access_token = authenticator.get_valid_token()
 
@@ -181,18 +205,30 @@ def test_get_valid_token_logs_in_when_refresh_fails(authenticator):
 def test_get_valid_token_logs_in_when_expired_without_refresh_token(authenticator):
     """An expired token with no refresh token leads to a new login."""
     authenticator._token = _token(expires_in=-10, refresh_token=None)
+    login_token = _token()
 
-    with patch.object(authenticator, "login", return_value=_token()) as mock_login:
+    with patch.object(authenticator, "login", return_value=login_token) as mock_login:
         authenticator.get_valid_token()
 
     mock_login.assert_called_once()
 
 
 def _fake_callback_server(callback_params):
-    """Returns a stand-in for CallbackServer that reports the given parameters."""
+    """Returns a stand-in for CallbackServer that reports the given parameters.
+
+    Args:
+        callback_params (dict[str, str] | None): The query parameters the server reports.
+    """
 
     class FakeServer:
-        """Fake server that skips the network and reports fixed callback params."""
+        """Fake server that skips the network and reports fixed callback params.
+
+        Attributes:
+            address (tuple[str, int]): The address the server was asked to bind.
+            handler (type): The request handler class.
+            callback_params (dict[str, str] | None): The parameters reported.
+            timeout (float | None): Unused timeout value.
+        """
 
         def __init__(self, address, handler):
             self.address = address
@@ -244,6 +280,7 @@ def test_wait_for_auth_code_raises_on_bad_callback(authenticator, params, messag
 
 def test_wait_for_auth_code_raises_when_redirect_uri_has_no_port(session):
     """A redirect URI without a port cannot host the callback server."""
+
     authenticator = SpotifyAuthenticator(
         client_id="client-id",
         redirect_uri="http://127.0.0.1/callback",
@@ -256,8 +293,11 @@ def test_wait_for_auth_code_raises_when_redirect_uri_has_no_port(session):
 
 def test_wait_for_auth_code_raises_when_server_cannot_start(authenticator):
     """If the callback server cannot bind its port, SpotifyAuthError is raised."""
+
+    startup_error = OSError("address in use")
+
     with (
-        patch(f"{MODULE}.CallbackServer", side_effect=OSError("address in use")),
+        patch(f"{MODULE}.CallbackServer", side_effect=startup_error),
         pytest.raises(SpotifyAuthError, match="Could not start callback server"),
     ):
         authenticator._wait_for_auth_code("s")

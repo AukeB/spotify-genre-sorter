@@ -41,6 +41,7 @@ def _delay_seconds(
         delay (float | None): Seconds to wait, or None if the wait the error
             asks for is longer than max_delay.
     """
+
     retry_after: float | None = getattr(error, "retry_after", None)
     exponential = min(base_delay * backoff ** (attempt - 1), max_delay)
 
@@ -99,6 +100,7 @@ def retry(
             Returns:
                 result (R): What the function returns.
             """
+
             attempt = 1
 
             while True:
